@@ -1,0 +1,15 @@
+{
+  "game_root": "game",
+  "engine_root": "engine/d5star",
+  "modules": "modules",
+  "defs": "defs",
+  "user_modules": "user://modules",
+  "module_manifest": "module.json",
+  "content": "content",
+  "system": "system",
+  "game_config": "game",
+  "parsers": "globals/drive/parser/parsers",
+  "things": "thing/things",
+  "thing_base": "thing/thing.gd",
+  "ui_dir": "ui"
+}
