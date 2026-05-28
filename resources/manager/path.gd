@@ -31,8 +31,8 @@ var _content_roots: Array[String] = []
 var _module_root: String = ""
 var _resolvers: Dictionary = {}
 
-func set_module_roots(content_roots: Array[String], module_root: String) -> void:
-	_content_roots = content_roots.duplicate()
+func set_module_roots(roots: Array[String], module_root: String) -> void:
+	_content_roots = roots.duplicate()
 	_module_root = module_root
 
 func register_resolver(resource_id: String, fn: Callable) -> void:
