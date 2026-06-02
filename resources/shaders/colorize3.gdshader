@@ -89,9 +89,10 @@ uniform float cold_desat : hint_range(0.0, 1.0) = 0.67;
 // *shades* (lighter / darker greens) instead of a flat block.
 // Multiplying RGB by a scalar preserves hue *and* saturation, so
 // the jitter never drifts a blue water hex toward green or a red
-// lava hex toward magenta — it stays strictly in family. Default
-// is ±12 %.
-uniform float value_jitter_max : hint_range(0.0, 0.5) = 0.05;
+// lava hex toward magenta — it stays strictly in family. Kept
+// very low (±2 %) so each biome reads as its own clear chroma
+// rather than blending visually with similar neighbours.
+uniform float value_jitter_max : hint_range(0.0, 0.5) = 0.02;
 
 // --- water shimmer --------------------------------------------------
 //
