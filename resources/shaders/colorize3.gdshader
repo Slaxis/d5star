@@ -94,6 +94,31 @@ uniform float cold_desat : hint_range(0.0, 1.0) = 0.67;
 // rather than blending visually with similar neighbours.
 uniform float value_jitter_max : hint_range(0.0, 0.5) = 0.02;
 
+// Body jitter — a heavier per-cell variation applied OUTSIDE the
+// climate path so the layer works without `climate_map` wired up
+// (today only `solid_air` uses it: each cloud-hex picks its own
+// brightness AND its own alpha, so adjacent bubbles read as
+// slightly different puffs of vapour with subtle outlines where
+// they touch).  Two independent hashes on the cell index drive
+// brightness and alpha so they're decorrelated — a darker cloud
+// isn't always also a more-transparent one. With
+// `body_jitter_speed > 0` the per-cell hashes become phase offsets
+// of a `sin(TIME * speed + phase)` oscillation — every cloud
+// breathes on its own schedule, the apparent motion masks the
+// static seam noise per-cell translucent tiles otherwise show.
+uniform float body_jitter_amount : hint_range(0.0, 0.5) = 0.0;
+uniform float body_jitter_speed  : hint_range(0.0, 5.0) = 0.0;
+
+// Radial falloff — alpha multiplier that's 1.0 inside `inner` and
+// linearly fades to 0 between `inner` and `outer` (measured from the
+// tile centre in world units). Solid_air uses inscribed → circum-
+// scribed so each cloud reads as a circle inscribed in its hex with
+// a halo extending to the hex vertices — adjacent halos overlap and
+// blend the hard hex grid into a continuous mass instead of a tiled
+// pattern. Both 0 disables the gradient.
+uniform float body_falloff_inner : hint_range(0.0, 256.0) = 0.0;
+uniform float body_falloff_outer : hint_range(0.0, 256.0) = 0.0;
+
 // --- water shimmer --------------------------------------------------
 //
 // Animated brightness ripple, ported from the-scrap-warriors'
@@ -294,5 +319,48 @@ void fragment() {
 	float gray = dot(base.rgb, vec3(0.299, 0.587, 0.114));
 	vec3 desat_rgb  = mix(base.rgb, vec3(gray), desat_amount);
 	vec3 tinted_rgb = mix(desat_rgb, tint_color.rgb, tint_amount);
-	COLOR = vec4(tinted_rgb, base.a * alpha);
+	float final_alpha = base.a * alpha;
+
+	// Body jitter + radial falloff — both rely on the per-cell
+	// `tile_centre` so they share a single recovery pass. Falloff
+	// fades the alpha from 1 at `inner` to 0 at `outer` measured
+	// from the cell centre; jitter modulates brightness and alpha
+	// per cell with two independent hashes; `body_jitter_speed > 0`
+	// turns the hashes into phase offsets of a TIME-driven sin().
+	if (body_jitter_amount > 0.0 || body_falloff_outer > 0.0) {
+		vec2 tile_size  = vec2(cell_step.x * 4.0 / 3.0, cell_step.y);
+		vec2 tile_centre = v_world_pos - (tile_uv - 0.5) * tile_size;
+
+		if (body_jitter_amount > 0.0) {
+			float bj_col = floor((tile_centre.x - layout_origin.x) / cell_step.x + 0.5);
+			float bj_col_parity = mod(bj_col, 2.0);
+			float bj_stagger_y = bj_col_parity * cell_stagger;
+			float bj_row = floor((tile_centre.y - layout_origin.y - bj_stagger_y) / cell_step.y + 0.5);
+			float bh = fract(sin(dot(vec2(bj_col, bj_row), vec2(127.1, 311.7))) * 43758.5453);
+			float ah = fract(sin(dot(vec2(bj_col, bj_row), vec2(311.7, 269.5))) * 43758.5453);
+			float bright_jitter;
+			float alpha_jitter;
+			if (body_jitter_speed > 0.0) {
+				float t = TIME * body_jitter_speed;
+				bright_jitter = sin(t + bh * 6.2831853) * body_jitter_amount;
+				alpha_jitter  = sin(t + ah * 6.2831853) * body_jitter_amount;
+			} else {
+				bright_jitter = (bh - 0.5) * 2.0 * body_jitter_amount;
+				alpha_jitter  = (ah - 0.5) * 2.0 * body_jitter_amount;
+			}
+			tinted_rgb = clamp(tinted_rgb * (1.0 + bright_jitter), 0.0, 1.0);
+			final_alpha = clamp(final_alpha * (1.0 + alpha_jitter), 0.0, 1.0);
+		}
+
+		if (body_falloff_outer > body_falloff_inner) {
+			float dist = length(v_world_pos - tile_centre);
+			float falloff = clamp(
+				(body_falloff_outer - dist) / (body_falloff_outer - body_falloff_inner),
+				0.0, 1.0
+			);
+			final_alpha *= falloff;
+		}
+	}
+
+	COLOR = vec4(tinted_rgb, final_alpha);
 }
