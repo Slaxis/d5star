@@ -98,3 +98,58 @@ func thing_data(thing_id: String) -> Dictionary:
 	if not runtime.is_empty():
 		return runtime
 	return Drive.read_content(Drive.content_path(thing_id))
+
+# --- Typed resolvers (script / texture / scene / json / shader) -----------
+#
+# Game and engine code consumes media via these typed facades — never a
+# `res://` path. JSON data files reference scripts by `class_name` and
+# assets by short ID; God resolves them via Godot's global class registry
+# (scripts) or Drive.content_path (textures / shaders / json data files).
+#
+# See `docs/BACKLOG.md` §B-001 for the convention rationale.
+
+var _script_class_cache: Dictionary = {}    # class_name -> Script
+
+# Resolves a GDScript class_name to its Script resource. Reads Godot's
+# project-wide class list (populated by every `class_name X` declaration
+# at boot), so any subclass — engine, module, or modder-supplied — is
+# discoverable without hardcoding paths.
+func script(class_name_str: String) -> Script:
+	var key: String = String(class_name_str).strip_edges()
+	if key == "":
+		return null
+	if _script_class_cache.has(key):
+		return _script_class_cache[key]
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		if String(entry.get("class", "")) == key:
+			var path: String = String(entry.get("path", ""))
+			if path == "":
+				return null
+			var loaded: Script = load(path) as Script
+			_script_class_cache[key] = loaded
+			return loaded
+	push_warning("God.script: unknown class_name '%s'" % key)
+	_script_class_cache[key] = null
+	return null
+
+# Loads a texture by short id (no `res://`). Defers to Drive.content_path
+# to find the file on disk via the project's content layout conventions.
+# Accepts a fallback path for caller-side defaults — falls back when the
+# id can't be resolved.
+func texture(texture_id: String, fallback_path: String = "") -> Texture2D:
+	var key: String = String(texture_id).strip_edges()
+	if key == "":
+		return _load_texture(fallback_path)
+	if key.begins_with("res://"):
+		# Caller passed a raw path — kept as an escape hatch for migration,
+		# but it should be rare. The right pattern is short ids.
+		return _load_texture(key)
+	var path: String = Drive.content_path(key, "png")
+	if path == "" or not ResourceLoader.exists(path):
+		return _load_texture(fallback_path)
+	return _load_texture(path)
+
+func _load_texture(path: String) -> Texture2D:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D

@@ -10,6 +10,9 @@ func add_sink(fn: Callable) -> void:
 	if fn.is_valid():
 		_sinks.append(fn)
 
+func remove_sink(fn: Callable) -> void:
+	_sinks.erase(fn)
+
 func _level_from_string(msg_type: String) -> Level:
 	match msg_type.strip_edges().to_lower():
 		"debug":
