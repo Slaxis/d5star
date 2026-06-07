@@ -10,11 +10,17 @@ func manager_id() -> String: return ID
 
 var defs_root: String = "res://game/defs"
 var system_subdir: String = "system"
+# Subdirectory inside a module's content_root that holds per-Thing
+# Def entries (one folder per Thing: `things/<def_id>/<thing_id>/<thing_id>.json`).
+# Renamed `def_things` to avoid colliding with the engine-level
+# `"things"` config (which points at the legacy Thing autoload base).
+var def_things_subdir: String = "things"
 
 func configure(config: Dictionary) -> void:
 	var game_root: String = "res://" + String(config.get("game_root", "game"))
 	defs_root = game_root + "/" + String(config.get("defs", "defs"))
 	system_subdir = String(config.get("system", system_subdir))
+	def_things_subdir = String(config.get("def_things", def_things_subdir))
 
 var _scripts: Dictionary = {}
 var _defs: Dictionary = {}
@@ -120,6 +126,62 @@ func apply_module_overrides(content_roots: Array[String]) -> void:
 		_reset_def(def_id)
 	for def_id: String in _scripts.keys():
 		_apply_override(def_id, content_roots)
+	# After legacy overrides settle, scan each module's `things/`
+	# subtree and feed per-Thing JSONs into the matching Defs via
+	# Def.add_thing(). Defs that don't override add_thing() silently
+	# ignore — keeps backward compat with the single-file mode.
+	_scan_things(content_roots)
+
+# Walks every active module's `<root>/<def_things_subdir>/<def_id>/<thing_id>/<thing_id>.json`
+# and routes each Thing to its Def via Def.add_thing(). Modules later in
+# content_roots[] overwrite earlier ones for the same Thing id.
+func _scan_things(content_roots: Array[String]) -> void:
+	print("[DefManager] _scan_things: content_roots=", content_roots, " def_things_subdir=", def_things_subdir)
+	print("[DefManager] _defs keys=", _defs.keys())
+	for root: String in content_roots:
+		var things_root: String = root + "/" + def_things_subdir
+		var things_dir: DirAccess = DirAccess.open(things_root)
+		print("[DefManager]   root=", things_root, " dir_open=", things_dir != null)
+		if things_dir == null:
+			continue
+		things_dir.list_dir_begin()
+		while true:
+			var def_id: String = things_dir.get_next()
+			if def_id == "":
+				break
+			if def_id.begins_with(".") or not things_dir.current_is_dir():
+				continue
+			print("[DefManager]     found def_id=", def_id, " is_def=", _defs.has(def_id))
+			var def: Def = _defs.get(def_id, null)
+			if def == null:
+				continue    # Module dropped Things for a Def we don't know
+			_scan_thing_dir(def, things_root + "/" + def_id)
+		things_dir.list_dir_end()
+
+# Walks `things/<def_id>/*/<basename>.json` where basename == folder name.
+# Per-Thing convention: one folder per Thing, JSON file shares the
+# folder's name (so `things/worldgen/pao_de_acucar/pao_de_acucar.json`).
+func _scan_thing_dir(def: Def, def_things_root: String) -> void:
+	var def_dir: DirAccess = DirAccess.open(def_things_root)
+	if def_dir == null:
+		return
+	def_dir.list_dir_begin()
+	while true:
+		var thing_id: String = def_dir.get_next()
+		if thing_id == "":
+			break
+		if thing_id.begins_with(".") or not def_dir.current_is_dir():
+			continue
+		var json_path: String = def_things_root + "/" + thing_id + "/" + thing_id + "." + JSON_EXT
+		print("[DefManager]       thing_id=", thing_id, " path=", json_path)
+		var raw: Dictionary = _read_json(json_path)
+		print("[DefManager]         parsed_empty=", raw.is_empty())
+		if raw.is_empty():
+			continue
+		if not raw.has("id"):
+			raw["id"] = thing_id    # Convenience: folder name IS the id by default
+		def.add_thing(raw)
+	def_dir.list_dir_end()
 
 func get_def(def_id: String) -> Def:
 	return _defs.get(_key(def_id), null)
