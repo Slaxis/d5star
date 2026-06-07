@@ -1,6 +1,9 @@
-# Game entrypoint: activate the default module, load rules, open the entry UI.
+# Game entrypoint: activate the default module, load rules, hand the
+# active Flow to a Flow runtime that survives scene swaps.
 extends Node2D
 class_name Game
+
+var _flow: Flow = null
 
 func _ready() -> void:
 	var modules: Array[ModuleInfo] = Drive.list_modules()
@@ -15,12 +18,23 @@ func _ready() -> void:
 	if the_rules == null or not the_rules.is_valid():
 		_boot_error("Invalid rules — check content/system/game.json in module '" + modules[0].id + "'.")
 		return
-	var asset_id: String = the_rules.get_asset()
-	var ui: PackedScene = The.ui(asset_id)
-	if ui == null:
-		_boot_error("Entry UI scene not found for id: '" + asset_id + "'.")
+	var flow_id: String = the_rules.get_flow()
+	var flow_def: FlowDef = Drive.def("flow") as FlowDef
+	if flow_def == null:
+		_boot_error("FlowDef not registered — check game/defs/flow.gd.")
 		return
-	The.next_scene(ui)
+	var flow_data: Dictionary = flow_def.get_flow(flow_id)
+	if flow_data.is_empty():
+		_boot_error("Flow '" + flow_id + "' not found — check content/things/flow/<id>/<id>.json.")
+		return
+	# Flow lives as a child of the SceneTree root so it survives the
+	# change_scene_to_packed calls it issues to swap screens; otherwise
+	# Game (which IS the boot scene) would take Flow down with it on
+	# the first transition.
+	_flow = Flow.new()
+	_flow.name = "FlowRuntime"
+	get_tree().root.add_child.call_deferred(_flow)
+	_flow.start.call_deferred(flow_data)
 
 # R8 — show a visible error screen instead of a blank window on boot failure.
 func _boot_error(message: String) -> void:

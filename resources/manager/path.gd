@@ -15,7 +15,7 @@ var game_root: String = RES_ROOT + "game"
 var parsers_subpath: String = "globals/drive/parser/parsers"
 var things_subpath: String = "thing/things"
 var thing_base_subpath: String = "thing/thing.gd"
-var ui_dir_id: String = "ui"
+var scene_dir_id: String = "scene"
 var game_config_name: String = "game"
 
 func configure(config: Dictionary) -> void:
@@ -24,7 +24,7 @@ func configure(config: Dictionary) -> void:
 	parsers_subpath = String(config.get("parsers", parsers_subpath))
 	things_subpath = String(config.get("things", things_subpath))
 	thing_base_subpath = String(config.get("thing_base", thing_base_subpath))
-	ui_dir_id = String(config.get("ui_dir", ui_dir_id))
+	scene_dir_id = String(config.get("scene_dir", scene_dir_id))
 	game_config_name = String(config.get("game_config", game_config_name))
 
 var _content_roots: Array[String] = []
@@ -128,21 +128,21 @@ func content_path(asset_id: String, extension: String = JSON_EXTENSION) -> Strin
 		return ""
 	return _find_content_asset_multi(key, extension)
 
-func ui_path(ui_id: String, dirs: Directories) -> String:
-	if ui_id == "":
+func scene_path(scene_id: String, dirs: Directories) -> String:
+	if scene_id == "":
 		return ""
-	if ui_id.begins_with(RES_ROOT):
-		return ui_id
-	var ui_dir: String = dirs.get_dir(ui_dir_id, ui_dir_id) if dirs else ui_dir_id
-	# 1) UI shipped inside the active module.
+	if scene_id.begins_with(RES_ROOT):
+		return scene_id
+	var scene_dir: String = dirs.get_dir(scene_dir_id, scene_dir_id) if dirs else scene_dir_id
+	# 1) Scene shipped inside the active module.
 	if _module_root != "":
-		var in_module: String = _module_root + "/" + ui_dir + "/" + ui_id + "/" + ui_id + "." + SCENE_EXTENSION
+		var in_module: String = _module_root + "/" + scene_dir + "/" + scene_id + "/" + scene_id + "." + SCENE_EXTENSION
 		if ResourceLoader.exists(in_module):
 			return in_module
-	# 2) R5 — game-level shell UI for screens that cannot live inside a
-	#    module (e.g. a module/campaign selector shown before any module
-	#    is active).
-	var in_game: String = game_root + "/" + ui_dir_id + "/" + ui_id + "/" + ui_id + "." + SCENE_EXTENSION
+	# 2) R5 — game-level shell scene for screens that cannot live inside
+	#    a module (e.g. a module/campaign selector shown before any
+	#    module is active).
+	var in_game: String = game_root + "/" + scene_dir_id + "/" + scene_id + "/" + scene_id + "." + SCENE_EXTENSION
 	if ResourceLoader.exists(in_game):
 		return in_game
 	return ""

@@ -1,3 +1,5 @@
+# CLAUDE: this class name is so boring
+# We should lorefy it better
 extends Node
 
 const CROSSFADE_SECONDS: float = 0.8

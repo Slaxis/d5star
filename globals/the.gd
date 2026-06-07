@@ -3,7 +3,7 @@
 extends Node
 
 var rules: Rules = null
-var uis: Dictionary = {}
+var scenes: Dictionary = {}
 var session: Dictionary = {}
 
 func _ready() -> void:
@@ -12,23 +12,23 @@ func _ready() -> void:
 func load_rules() -> void:
 	rules = God.rules()
 
-func ui(ui_id: String) -> PackedScene:
-	if uis.has(ui_id):
-		return uis[ui_id]
-	var the_ui: PackedScene = God.ui(ui_id)
-	if the_ui:
-		uis[ui_id] = the_ui
-	return the_ui
+func scene(scene_id: String) -> PackedScene:
+	if scenes.has(scene_id):
+		return scenes[scene_id]
+	var the_scene: PackedScene = God.scene(scene_id)
+	if the_scene:
+		scenes[scene_id] = the_scene
+	return the_scene
 
-func next_scene(scene: PackedScene) -> void:
-	if scene == null:
+func next_scene(packed: PackedScene) -> void:
+	if packed == null:
 		Log.log(self, "error", "Next scene is null.")
 		return
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		Log.log(self, "error", "SceneTree is not available.")
 		return
-	tree.call_deferred("change_scene_to_packed", scene)
+	tree.call_deferred("change_scene_to_packed", packed)
 
 # --- Memento: Save / Load ---
 

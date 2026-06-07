@@ -11,5 +11,5 @@
   "parsers": "globals/drive/parser/parsers",
   "things": "thing/things",
   "thing_base": "thing/thing.gd",
-  "ui_dir": "ui"
+  "scene_dir": "scene"
 }

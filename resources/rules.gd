@@ -5,13 +5,13 @@ class_name Rules
 var id: String = ""
 var name: String = ""
 var version: String = ""
-var asset: String = ""
+var flow: String = ""
 
 func is_empty() -> bool:
-	return id == "" and name == "" and version == "" and asset == ""
+	return id == "" and name == "" and version == "" and flow == ""
 
-func get_asset() -> String:
-	return String(asset).strip_edges()
+func get_flow() -> String:
+	return String(flow).strip_edges()
 
 func is_valid() -> bool:
-	return not is_empty() and get_asset() != ""
+	return not is_empty() and get_flow() != ""

@@ -243,8 +243,8 @@ func list_json_by_group(group_id: String) -> Array[Dictionary]:
 				results.append(raw)
 	return results
 
-func ui(ui_id: String) -> String:
+func scene(scene_id: String) -> String:
 	var pm: PathManager = _m(PathManager.ID) as PathManager
 	if pm == null:
 		return ""
-	return pm.ui_path(ui_id, directories())
+	return pm.scene_path(scene_id, directories())

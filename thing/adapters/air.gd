@@ -1,4 +1,10 @@
 # Per-Thing typed command bus for internal thought routing.
+# CLAUDE: ThingAir is redundant with Air. But how can we solve both having the same interface?
+# I think the best solution is to have Air as a Node
+# then the Singleton becomes GlobalAir, with an attribute "air", which is an Air instance.
+# and then ThingAir can be dropped, and Things can just use Air directly. This way we avoid the redundancy and keep a clean architecture.
+# GlobalAir has to be an adapter for Air, so we have to maintenance its interface
+# But the way it is we have to synchronize both Air and ThingAir, which is error prone.
 extends RefCounted
 class_name ThingAir
 

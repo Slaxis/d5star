@@ -78,8 +78,8 @@ func rules() -> Rules:
 		return Rules.new()
 	return new_rules
 
-func ui(ui_id: String) -> PackedScene:
-	var path: String = Drive.ui(ui_id)
+func scene(scene_id: String) -> PackedScene:
+	var path: String = Drive.scene(scene_id)
 	if path == "":
 		return null
 	return load(path) as PackedScene
