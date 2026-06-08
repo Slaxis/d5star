@@ -13,12 +13,29 @@ var cards: Array[Card] = []
 var picked: Card = null
 
 # Convenience constructor: draw `n` cards from the named deck and
-# return them in a fresh Hand. Pass an RNG for deterministic draws.
-static func draw(deck_id: String, n: int = 3, rng: RandomNumberGenerator = null) -> Hand:
+# return them in a fresh Hand. Default is 5 — the Sugar Loaf canon
+# size that gives each character creation step ~84 distinct possible
+# hands from a typical 14-card visible pool. Pass an RNG for
+# deterministic draws.
+static func draw(group_id: String, n: int = 5, rng: RandomNumberGenerator = null) -> Hand:
 	var hand := Hand.new()
-	hand.deck_id = deck_id
-	var deck: Deck = Deck.from_group(deck_id)
+	hand.deck_id = group_id
+	var deck: Deck = Deck.from_group(group_id)
 	hand.cards = deck.draw(n, rng)
+	return hand
+
+# Filtered constructor: draw `n` cards from a Deck after restricting
+# the pool to cards whose `class_affinity` intersects `accepted`. The
+# `accepted` list is computed by the caller against its own affinity
+# rules (Sugar Loaf maps a player class → its allies + EXSULES via
+# `ClassAffinity.for_class()`; another module could plug a different
+# table without touching the engine).
+static func draw_filtered(group_id: String, n: int, accepted: Array, rng: RandomNumberGenerator = null) -> Hand:
+	var hand := Hand.new()
+	hand.deck_id = group_id
+	var deck: Deck = Deck.from_group(group_id)
+	var filtered: Deck = deck.filter_by_affinity(accepted)
+	hand.cards = filtered.draw(n, rng)
 	return hand
 
 # Commit the player's choice. Out-of-range indices are silent no-ops

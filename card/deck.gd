@@ -99,3 +99,32 @@ func find(card_id: String) -> Card:
 		if c.id == card_id:
 			return c
 	return null
+
+# Returns a new Deck containing only the cards whose `class_affinity`
+# intersects `accepted` (case-sensitive tag match). A card with an
+# empty `class_affinity` is treated as UNIVERSAL and always passes
+# the filter — letting modules ship "appears for everyone" cards
+# without enumerating every class.
+#
+# The caller composes the `accepted` list against the game's own
+# affinity rules (e.g. a Sugar Loaf player DOMINI passes
+# ["domini", "clerus", "milites", "exsules"] — own class + pyramid
+# allies + the universal EXSULES tag). The engine itself stays
+# game-agnostic; the table lives in game/.
+func filter_by_affinity(accepted: Array) -> Deck:
+	var accepted_set: Dictionary = {}
+	for tag: Variant in accepted:
+		accepted_set[String(tag)] = true
+	var pool: Array[Card] = []
+	for card: Card in cards:
+		if card.class_affinity.is_empty():
+			pool.append(card)
+			continue
+		for tag: String in card.class_affinity:
+			if accepted_set.has(tag):
+				pool.append(card)
+				break
+	var filtered := Deck.new()
+	filtered.id = id
+	filtered.cards = pool
+	return filtered
