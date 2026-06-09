@@ -168,6 +168,22 @@ const _CP_GLYPHS: Dictionary = {
 	"pistis": "★",
 }
 
+# Per-group chip glyph — duplicated from game/defs/stats.gd's
+# GROUP_ICONS for the same reason as the stat tables above (engine
+# can't reach into game/). Each modifier on a card renders as N
+# copies of this glyph: "+2 DEX" → ✋✋ in green; "-1 FOR" → 🔥
+# in red. Colour comes from sign, not from stat colour.
+const _GROUP_ICONS: Dictionary = {
+	"brutalidade": "🔥",
+	"finesse":     "✋",
+	"empatia":     "♥",
+	"cognicao":    "👁",
+	"psique":      "★",
+}
+
+const _CHIP_GREEN: Color = Color(0.55, 0.85, 0.40)
+const _CHIP_RED:   Color = Color(0.95, 0.30, 0.25)
+
 const _CP_COLORS: Dictionary = {
 	"ethos":  Color("#B23B2E"),
 	"metis":  Color("#D4942A"),
@@ -466,43 +482,27 @@ func _rebuild_stats(mods: Variant) -> void:
 		var value: int = int(dict[key_v])
 		if value == 0:
 			continue
-		_stats_flow.add_child(_make_badge(key, value))
+		_stats_flow.add_child(_make_chip_strip(key, value))
 
-func _make_badge(stat_id: String, value: int) -> Panel:
-	var badge := Panel.new()
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var stat_color: Color = _STAT_COLORS.get(stat_id, Color.GRAY)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = stat_color
-	sb.border_color = stat_color.darkened(0.4)
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(3)
-	sb.content_margin_left = 8
-	sb.content_margin_right = 8
-	sb.content_margin_top = 2
-	sb.content_margin_bottom = 2
-	badge.add_theme_stylebox_override("panel", sb)
-
-	var prefix: String = ("+" if value > 0 else "")
-	var abbr: String = String(_STAT_ABBR.get(stat_id, stat_id.substr(0, 3).to_upper()))
-	var text: String = "%s%d%s" % [prefix, value, abbr]
-
-	# Measure text so the badge sizes to fit AND the label can centre.
-	var font: Font = badge.get_theme_default_font()
-	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, 10).x
-	var badge_w: int = int(ceil(text_w)) + 18    # +8 padding each side + buffer
-	badge.custom_minimum_size = Vector2(badge_w, 20)
-
-	var label := Label.new()
-	label.text = text
-	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 10)
-	label.add_theme_color_override("font_color", _label_color_on(stat_color))
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badge.add_child(label)
-	return badge
+# Chip strip — `magnitude` copies of the stat's pixel-art icon
+# (10×10 native, crisp NEAREST). Positive modifiers render in the
+# stat's canonical colour (FOR red, DEX amber, INT cobalt …);
+# negative modifiers render in a universal penalty red so a `-1 FOR`
+# reads as "penalty" at a glance even though it shares the colour
+# slot with brutalidade-positive icons.
+#
+# StatIcons lives in game/defs/ but is class_name-registered globally
+# so the engine layer can reference it. This breaks the strict
+# "engine doesn't know about Sugar Loaf" rule for visual consistency
+# — refactor when another game module needs different icons.
+func _make_chip_strip(stat_id: String, value: int) -> Control:
+	var box := HBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override("separation", 2)
+	var is_negative: bool = value < 0
+	for i: int in absi(value):
+		box.add_child(StatIcons.make_stat_rect(stat_id, is_negative, 1))
+	return box
 
 func _clear_stats() -> void:
 	if _stats_flow == null:

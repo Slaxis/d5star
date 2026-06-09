@@ -52,6 +52,21 @@ static func draw_filtered(group_id: String, n: int, accepted: Array, rng: Random
 	hand.cards = filtered.draw(n, rng)
 	return hand
 
+# Composite constructor: filter the pool by `accepted` affinities AND
+# spread the draw across distinct castas. Used by Sugar Loaf for the
+# post-Ancestrais steps (Origem, Mentor) — once the player has picked
+# a casta the draw should both (a) hide enemy-pyramid cards and (b)
+# keep showing one card per remaining casta so each draw spans the
+# allowed colours. With the canonical pyramid 4 castas wide (self +
+# 2 allies + EXSULES), `n=5` returns 4 cards — one per allied colour.
+static func draw_one_per_allied_class(group_id: String, n: int, accepted: Array, rng: RandomNumberGenerator = null) -> Hand:
+	var hand := Hand.new()
+	hand.deck_id = group_id
+	var deck: Deck = Deck.from_group(group_id)
+	var filtered: Deck = deck.filter_by_affinity(accepted)
+	hand.cards = filtered.draw_one_per_class(n, rng)
+	return hand
+
 # Commit the player's choice. Out-of-range indices are silent no-ops
 # (caller should validate input). Picking twice replaces the choice
 # — UI can therefore allow "I changed my mind" before confirming.
