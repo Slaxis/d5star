@@ -24,6 +24,20 @@ static func draw(group_id: String, n: int = 5, rng: RandomNumberGenerator = null
 	hand.cards = deck.draw(n, rng)
 	return hand
 
+# Constrained constructor: draw `n` cards with at most ONE per
+# casta (first `class_affinity` tag). Used by Sugar Loaf for the
+# Ancestrais step so the player always sees a spread of distinct
+# castas instead of rolling double-DOMINI and having to restart.
+# When the deck has more castas than `n`, the excluded ones are
+# random per draw — restart is still useful for re-rolling which
+# casta gets dropped.
+static func draw_one_per_class(group_id: String, n: int = 5, rng: RandomNumberGenerator = null) -> Hand:
+	var hand := Hand.new()
+	hand.deck_id = group_id
+	var deck: Deck = Deck.from_group(group_id)
+	hand.cards = deck.draw_one_per_class(n, rng)
+	return hand
+
 # Filtered constructor: draw `n` cards from a Deck after restricting
 # the pool to cards whose `class_affinity` intersects `accepted`. The
 # `accepted` list is computed by the caller against its own affinity

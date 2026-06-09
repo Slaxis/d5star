@@ -100,6 +100,47 @@ func find(card_id: String) -> Card:
 			return c
 	return null
 
+# Draws `n` cards from the deck under the constraint that no two
+# share a `class_affinity` value — at most one card per casta in
+# the hand. Useful for the Ancestrais step: with 6 castas in the
+# pool and a hand of 5, one casta is randomly excluded each draw,
+# but the player always sees five DIFFERENT options instead of
+# rolling double-DOMINI and being railroaded.
+#
+# Algorithm: bucket cards by their first affinity tag, shuffle the
+# buckets, take the first `n`, then weighted-rarity-draw 1 card from
+# each chosen bucket. Cards without an affinity tag (universal cards)
+# are skipped — for those, fall back to the normal `draw()`.
+func draw_one_per_class(n: int, rng: RandomNumberGenerator = null) -> Array[Card]:
+	if rng == null:
+		rng = RandomNumberGenerator.new()
+		rng.randomize()
+	var by_class: Dictionary = {}    # class_id -> Array of cards
+	for card: Card in cards:
+		if card.class_affinity.is_empty():
+			continue
+		var key: String = card.class_affinity[0]
+		if not by_class.has(key):
+			by_class[key] = []
+		(by_class[key] as Array).append(card)
+	var class_ids: Array = by_class.keys()
+	class_ids.shuffle()
+	var to_keep: int = mini(n, class_ids.size())
+	var result: Array[Card] = []
+	for i: int in to_keep:
+		var subset_raw: Array = by_class[String(class_ids[i])]
+		var subset: Array[Card] = []
+		for c: Variant in subset_raw:
+			if c is Card:
+				subset.append(c)
+		var sub_deck := Deck.new()
+		sub_deck.id = id
+		sub_deck.cards = subset
+		var pick: Array[Card] = sub_deck.draw(1, rng)
+		if pick.size() > 0:
+			result.append(pick[0])
+	return result
+
 # Returns a new Deck containing only the cards whose `class_affinity`
 # intersects `accepted` (case-sensitive tag match). A card with an
 # empty `class_affinity` is treated as UNIVERSAL and always passes

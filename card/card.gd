@@ -17,10 +17,24 @@ const _DECK_GROUP_PREFIX: String = "card."
 var id: String = ""
 var deck_id: String = ""
 var rarity: String = "common"
+var tier: int = 1            # power-tier band 1..5; orthogonal to rarity
+var cost: int = 1            # resource cost to play / pick (Fibonacci default)
 var name: Variant = ""       # String or i18n dict {pt, en}
 var flavor: Variant = ""     # String or i18n dict
 var art_id: String = ""
 var payload: Dictionary = {}
+
+# Fibonacci power-budget grid: cost[rarity][tier-1].
+# Each step right (rarity) or down (tier) advances one Fibonacci
+# position — diagonals are equivalent (a T1 Rare costs 3, same as a
+# T2 Uncommon, same as a T3 Common). The grid is the engine default;
+# any Thing can override with an explicit `data.cost: <int>` field.
+const _FIBONACCI_COST_GRID: Dictionary = {
+	"common":   [1, 2,  3,  5,  8],
+	"uncommon": [2, 3,  5,  8, 13],
+	"rare":     [3, 5,  8, 13, 21],
+	"mythic":   [5, 8, 13, 21, 34],
+}
 
 # Affinity tags — the card appears in any draw pool whose accepted
 # affinities intersect this list. An empty list means UNIVERSAL —
@@ -56,6 +70,8 @@ static func from_thing(thing: Dictionary) -> Card:
 		return c
 	var data_dict: Dictionary = data
 	c.rarity = String(data_dict.get("rarity", "common"))
+	c.tier = int(data_dict.get("tier", 1))
+	c.cost = int(data_dict.get("cost", _fibonacci_cost(c.rarity, c.tier)))
 	var card_meta: Variant = data_dict.get("card", {})
 	if card_meta is Dictionary:
 		var meta: Dictionary = card_meta
@@ -78,3 +94,12 @@ func name_text() -> String:
 
 func flavor_text() -> String:
 	return I18n.text(flavor, "")
+
+# Look up the Fibonacci default cost for a given (rarity, tier). Used
+# by `from_thing` when the Thing doesn't carry an explicit `cost` —
+# the same grid is also referenced by gameplay code that needs to
+# compute "what would this cost in HeP / mana / etc.".
+static func _fibonacci_cost(card_rarity: String, card_tier: int) -> int:
+	var grid: Array = _FIBONACCI_COST_GRID.get(card_rarity, [1])
+	var idx: int = clampi(card_tier - 1, 0, grid.size() - 1)
+	return int(grid[idx])
