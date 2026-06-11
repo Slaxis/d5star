@@ -9,13 +9,18 @@ class_name Deck
 extends RefCounted
 
 # Relative weights for the draw lottery. Heavier = more likely.
-# A common card is 10x as likely to surface as a rare; mythic is the
-# "show up once every fifty games" tier.
+# COMUM is the bread-and-butter (5 per casta per deck in the 1ª
+# edição), ELITE shows up about half as often, SUPER a sixth, MITO
+# is the "once every twenty draws" tier, DIVINO the once-a-game
+# legendary. The numbers tie loosely to the per-deck card count
+# distribution (5/3/2/1/1) — equal probability per slot lands on
+# these weights.
 const RARITY_WEIGHTS: Dictionary = {
-	"common":   100,
-	"uncommon": 40,
-	"rare":     10,
-	"mythic":   2,
+	"comum":   100,
+	"elite":   40,
+	"super":   15,
+	"mito":    4,
+	"divino":  1,
 }
 
 var id: String = ""

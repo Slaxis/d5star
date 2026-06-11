@@ -16,7 +16,7 @@ const _DECK_GROUP_PREFIX: String = "card."
 
 var id: String = ""
 var deck_id: String = ""
-var rarity: String = "common"
+var rarity: String = "comum"
 var tier: int = 1            # power-tier band 1..5; orthogonal to rarity
 var cost: int = 1            # resource cost to play / pick (Fibonacci default)
 var name: Variant = ""       # String or i18n dict {pt, en}
@@ -24,16 +24,44 @@ var flavor: Variant = ""     # String or i18n dict
 var art_id: String = ""
 var payload: Dictionary = {}
 
-# Fibonacci power-budget grid: cost[rarity][tier-1].
-# Each step right (rarity) or down (tier) advances one Fibonacci
-# position — diagonals are equivalent (a T1 Rare costs 3, same as a
-# T2 Uncommon, same as a T3 Common). The grid is the engine default;
-# any Thing can override with an explicit `data.cost: <int>` field.
+# Flaw level — 0..5 commitment to pre-declared weaknesses. F0 =
+# pristine, F5 = maximally compromised. Used by the game's
+# CardEconomy to compute extra PP budget on COMUM/ELITE (zero on
+# higher rarities). Engine just preserves the field; the math
+# lives in `game/defs/card_economy.gd`.
+var flaw_level: int = 0
+
+# Edition tag — release identifier for cards. The current canonical
+# Sugar Loaf cards (the alpha exploration set) are tagged "alpha";
+# the 1st-edition canon set is "prime"; future expansions get their
+# own slug ("reflorestamento", "trovao_verde", etc.). The game layer
+# filters by active edition; engine just preserves the field.
+var edition: String = "alpha"
+
+# Fibonacci power-budget grid: cost[rarity][tier-1]. Legacy default
+# for alpha-edition cards that don't carry an explicit `data.cost`
+# field. The prime edition uses CardEconomy.omega_cost(rarity, tier)
+# instead (base_cost + size_tax), but card.gd stays generic — the
+# economy is a game-layer concern.
 const _FIBONACCI_COST_GRID: Dictionary = {
-	"common":   [1, 2,  3,  5,  8],
-	"uncommon": [2, 3,  5,  8, 13],
-	"rare":     [3, 5,  8, 13, 21],
-	"mythic":   [5, 8, 13, 21, 34],
+	"comum":   [1, 2,  3,  5,  8],
+	"elite":   [2, 3,  5,  8, 13],
+	"super":   [3, 5,  8, 13, 21],
+	"mito":    [5, 8, 13, 21, 34],
+	"divino":  [8, 13, 21, 34, 55],
+}
+
+# Backward-compat aliases for the legacy English rarity strings
+# used by the alpha-edition cards. Translated at parse time so the
+# rest of the engine + game only ever sees the canonical PT-BR
+# rarity slugs.
+const _RARITY_ALIASES: Dictionary = {
+	"common":    "comum",
+	"uncommon":  "elite",
+	"rare":      "super",
+	"mythic":    "mito",
+	"legendary": "divino",
+	"divine":    "divino",
 }
 
 # Affinity tags — the card appears in any draw pool whose accepted
@@ -69,8 +97,11 @@ static func from_thing(thing: Dictionary) -> Card:
 	if not data is Dictionary:
 		return c
 	var data_dict: Dictionary = data
-	c.rarity = String(data_dict.get("rarity", "common"))
+	var raw_rarity: String = String(data_dict.get("rarity", "comum"))
+	c.rarity = String(_RARITY_ALIASES.get(raw_rarity, raw_rarity))
 	c.tier = int(data_dict.get("tier", 1))
+	c.flaw_level = int(data_dict.get("flaw_level", 0))
+	c.edition = String(data_dict.get("edition", "alpha"))
 	c.cost = int(data_dict.get("cost", _fibonacci_cost(c.rarity, c.tier)))
 	var card_meta: Variant = data_dict.get("card", {})
 	if card_meta is Dictionary:

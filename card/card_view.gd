@@ -130,16 +130,16 @@ const _STAT_ABBR: Dictionary = {
 }
 
 const _STAT_COLORS: Dictionary = {
-	"forca":        Color("#B23B2E"),
-	"vitalidade":   Color("#C46B2C"),
-	"agilidade":    Color("#E0A82A"),
-	"destreza":     Color("#B8722A"),
-	"carisma":      Color("#5BAA52"),
-	"sabedoria":    Color("#3B6F35"),
-	"inteligencia": Color("#4570AA"),
-	"percepcao":    Color("#6EA7C9"),
-	"vontade":      Color("#6B3B95"),
-	"intuicao":     Color("#9C7DC9"),
+	"forca":        Color("#C46B2C"),    # brutalidade active, lighter
+	"vitalidade":   Color("#B23B2E"),    # brutalidade defensive, darker
+	"agilidade":    Color("#B8722A"),    # finesse defensive, darker
+	"destreza":     Color("#E0A82A"),    # finesse active, lighter
+	"carisma":      Color("#5BAA52"),    # empatia active, lighter
+	"sabedoria":    Color("#3B6F35"),    # empatia defensive, darker
+	"inteligencia": Color("#6EA7C9"),    # cognição active, lighter
+	"percepcao":    Color("#4570AA"),    # cognição defensive, darker
+	"vontade":      Color("#9C7DC9"),    # psique active, lighter
+	"intuicao":     Color("#6B3B95"),    # psique defensive, darker
 }
 
 # stat → stat-group → Command Point, duplicated here for the same
@@ -501,7 +501,12 @@ func _make_chip_strip(stat_id: String, value: int) -> Control:
 	box.add_theme_constant_override("separation", 2)
 	var is_negative: bool = value < 0
 	for i: int in absi(value):
-		box.add_child(StatIcons.make_stat_rect(stat_id, is_negative, 1))
+		# make_stat_chip wraps the icon in a 1px drop shadow + (when
+		# negative) dims it to gray with a red minus bar overlaid.
+		# Without this wrapper the negative variant rendered in
+		# brutalidade-red and was indistinguishable from positive
+		# brutalidade chips.
+		box.add_child(StatIcons.make_stat_chip(stat_id, is_negative, 1))
 	return box
 
 func _clear_stats() -> void:

@@ -158,29 +158,37 @@ func _scan_things(content_roots: Array[String]) -> void:
 			_scan_thing_dir(def, things_root + "/" + def_id)
 		things_dir.list_dir_end()
 
-# Walks `things/<def_id>/*/<basename>.json` where basename == folder name.
-# Per-Thing convention: one folder per Thing, JSON file shares the
-# folder's name (so `things/worldgen/pao_de_acucar/pao_de_acucar.json`).
+# Walks `things/<def_id>/<thing_id>/<thing_id>.json` where the inner
+# JSON shares the folder name (so `things/worldgen/pao_de_acucar/
+# pao_de_acucar.json`). Subfolders that do NOT carry a matching JSON
+# are treated as ORGANIZATIONAL — the scanner recurses into them so a
+# def can group its Things into subdirectories like `editions/prime/`
+# or `castas/captivi/` without inventing new ids. The first match
+# wins (a folder named `foo` containing `foo.json` is parsed as Thing
+# `foo`, not recursed into).
 func _scan_thing_dir(def: Def, def_things_root: String) -> void:
 	var def_dir: DirAccess = DirAccess.open(def_things_root)
 	if def_dir == null:
 		return
 	def_dir.list_dir_begin()
 	while true:
-		var thing_id: String = def_dir.get_next()
-		if thing_id == "":
+		var entry: String = def_dir.get_next()
+		if entry == "":
 			break
-		if thing_id.begins_with(".") or not def_dir.current_is_dir():
+		if entry.begins_with(".") or not def_dir.current_is_dir():
 			continue
-		var json_path: String = def_things_root + "/" + thing_id + "/" + thing_id + "." + JSON_EXT
-		print("[DefManager]       thing_id=", thing_id, " path=", json_path)
+		var entry_path: String = def_things_root + "/" + entry
+		var json_path: String = entry_path + "/" + entry + "." + JSON_EXT
 		var raw: Dictionary = _read_json(json_path)
-		print("[DefManager]         parsed_empty=", raw.is_empty())
-		if raw.is_empty():
-			continue
-		if not raw.has("id"):
-			raw["id"] = thing_id    # Convenience: folder name IS the id by default
-		def.add_thing(raw)
+		if not raw.is_empty():
+			print("[DefManager]       thing_id=", entry, " path=", json_path)
+			if not raw.has("id"):
+				raw["id"] = entry    # Convenience: folder name IS the id by default
+			def.add_thing(raw)
+		else:
+			# No matching JSON — treat as organizational subdir + recurse.
+			print("[DefManager]       subdir=", entry, " (recursing)")
+			_scan_thing_dir(def, entry_path)
 	def_dir.list_dir_end()
 
 func get_def(def_id: String) -> Def:
