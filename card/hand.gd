@@ -20,7 +20,7 @@ var picked: Card = null
 static func draw(group_id: String, n: int = 5, rng: RandomNumberGenerator = null) -> Hand:
 	var hand := Hand.new()
 	hand.deck_id = group_id
-	var deck: Deck = Deck.from_group(group_id)
+	var deck: Deck = Deck.from_group(group_id).filter_by_edition(Deck.active_edition)
 	hand.cards = deck.draw(n, rng)
 	return hand
 
@@ -31,10 +31,12 @@ static func draw(group_id: String, n: int = 5, rng: RandomNumberGenerator = null
 # When the deck has more castas than `n`, the excluded ones are
 # random per draw — restart is still useful for re-rolling which
 # casta gets dropped.
-static func draw_one_per_class(group_id: String, n: int = 5, rng: RandomNumberGenerator = null) -> Hand:
+static func draw_one_per_class(group_id: String, n: int = 5, rng: RandomNumberGenerator = null, max_cost: int = -1) -> Hand:
 	var hand := Hand.new()
 	hand.deck_id = group_id
-	var deck: Deck = Deck.from_group(group_id)
+	var deck: Deck = Deck.from_group(group_id) \
+		.filter_by_edition(Deck.active_edition) \
+		.filter_by_max_cost(max_cost)
 	hand.cards = deck.draw_one_per_class(n, rng)
 	return hand
 
@@ -47,7 +49,7 @@ static func draw_one_per_class(group_id: String, n: int = 5, rng: RandomNumberGe
 static func draw_filtered(group_id: String, n: int, accepted: Array, rng: RandomNumberGenerator = null) -> Hand:
 	var hand := Hand.new()
 	hand.deck_id = group_id
-	var deck: Deck = Deck.from_group(group_id)
+	var deck: Deck = Deck.from_group(group_id).filter_by_edition(Deck.active_edition)
 	var filtered: Deck = deck.filter_by_affinity(accepted)
 	hand.cards = filtered.draw(n, rng)
 	return hand
@@ -59,12 +61,14 @@ static func draw_filtered(group_id: String, n: int, accepted: Array, rng: Random
 # keep showing one card per remaining casta so each draw spans the
 # allowed colours. With the canonical pyramid 4 castas wide (self +
 # 2 allies + EXSULES), `n=5` returns 4 cards — one per allied colour.
-static func draw_one_per_allied_class(group_id: String, n: int, accepted: Array, rng: RandomNumberGenerator = null) -> Hand:
+static func draw_one_per_allied_class(group_id: String, n: int, accepted: Array, rng: RandomNumberGenerator = null, max_cost: int = -1) -> Hand:
 	var hand := Hand.new()
 	hand.deck_id = group_id
-	var deck: Deck = Deck.from_group(group_id)
-	var filtered: Deck = deck.filter_by_affinity(accepted)
-	hand.cards = filtered.draw_one_per_class(n, rng)
+	var deck: Deck = Deck.from_group(group_id) \
+		.filter_by_edition(Deck.active_edition) \
+		.filter_by_affinity(accepted) \
+		.filter_by_max_cost(max_cost)
+	hand.cards = deck.draw_one_per_class(n, rng)
 	return hand
 
 # Commit the player's choice. Out-of-range indices are silent no-ops

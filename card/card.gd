@@ -102,7 +102,11 @@ static func from_thing(thing: Dictionary) -> Card:
 	c.tier = int(data_dict.get("tier", 1))
 	c.flaw_level = int(data_dict.get("flaw_level", 0))
 	c.edition = String(data_dict.get("edition", "alpha"))
-	c.cost = int(data_dict.get("cost", _fibonacci_cost(c.rarity, c.tier)))
+	# Cost / mana — prime-edition cards carry a `mana` field (1..5 for
+	# lifepath); alpha-edition cards may carry `cost`; both fall back
+	# to the legacy Fibonacci grid. `mana` wins so the new cards
+	# display their intended pick cost in the UI.
+	c.cost = int(data_dict.get("mana", data_dict.get("cost", _fibonacci_cost(c.rarity, c.tier))))
 	var card_meta: Variant = data_dict.get("card", {})
 	if card_meta is Dictionary:
 		var meta: Dictionary = card_meta

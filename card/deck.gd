@@ -8,6 +8,13 @@
 class_name Deck
 extends RefCounted
 
+# Active card edition — the game shows only cards whose `edition`
+# matches this. Defaults to `"prime"` (the 1ª edição). Set to `""`
+# to disable edition filtering and surface every loaded card (mixing
+# alpha + prime). Game-layer code can flip this on module activation
+# if it wants to play with an older edition.
+static var active_edition: String = "prime"
+
 # Relative weights for the draw lottery. Heavier = more likely.
 # COMUM is the bread-and-butter (5 per casta per deck in the 1ª
 # edição), ELITE shows up about half as often, SUPER a sixth, MITO
@@ -96,6 +103,38 @@ func count_by_rarity(rarity: String) -> int:
 		if c.rarity == rarity:
 			n += 1
 	return n
+
+# Returns a new Deck containing only the cards whose `edition` field
+# matches `target`. An empty `target` is a no-op and returns a copy
+# of the full deck — convenient for the game-layer "disable edition
+# filtering" path.
+func filter_by_edition(target: String) -> Deck:
+	var filtered := Deck.new()
+	filtered.id = id
+	if target == "":
+		filtered.cards = cards.duplicate()
+		return filtered
+	for card: Card in cards:
+		if card.edition == target:
+			filtered.cards.append(card)
+	return filtered
+
+# Returns a new Deck containing only the cards whose `cost` is at
+# most `max_cost`. Used by the character-creation flow to hide cards
+# the player can no longer afford at the current step — e.g. after
+# spending 5 HeP on the ancestral, the origem draw drops anything
+# that would leave 0 HeP for the mentor. A `max_cost` < 0 is a no-op
+# and returns a copy of the full deck.
+func filter_by_max_cost(max_cost: int) -> Deck:
+	var filtered := Deck.new()
+	filtered.id = id
+	if max_cost < 0:
+		filtered.cards = cards.duplicate()
+		return filtered
+	for card: Card in cards:
+		if card.cost <= max_cost:
+			filtered.cards.append(card)
+	return filtered
 
 # Lookup a single card by id — useful for restoring a Hand from
 # session state (`from_session`).
