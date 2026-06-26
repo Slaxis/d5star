@@ -107,6 +107,14 @@ const _DEFAULT_TEXTURE: Dictionary = {
 	"pattern_mode": 0, "pixel_size": 3.0,
 }
 
+# Arcano texture — Mario invincibility-star shimmer. Animated rainbow
+# sweep, ignores tints entirely (the shader produces its own RGB on
+# pattern_mode 12). Larger pixel_size for chunkier "pixel-art star"
+# feel that matches the source inspiration.
+const _ARCANO_TEXTURE: Dictionary = {
+	"pattern_mode": 12, "pixel_size": 4.0,
+}
+
 const _TYPE_LABELS: Dictionary = {
 	"ancestrais": "ANCESTRAL",
 	"origem":     "ORIGEM",
@@ -564,6 +572,12 @@ func _refresh_bg(c: Card) -> void:
 	# camo pattern uses for its mid zone — for every other casta
 	# tint_c stays equal to tint_b and the shader's 3-tone path
 	# collapses to 2-tone.
+	# Arcanos are class-agnostic — they get the Mario-star shimmer
+	# instead of a casta-bound pattern. The shader ignores tints in
+	# mode 12, but we still set them to neutral dark so any leftover
+	# values from a previous card don't bleed through.
+	var category: String = String(c.payload.get("category", ""))
+	var is_arcano: bool = category == "arcano"
 	var class_id: String = String(c.payload.get("class_id", ""))
 	var tints: Dictionary = _CLASS_TINTS.get(class_id, {
 		"a": _CARD_DARK, "b": _CARD_DARK,
@@ -572,7 +586,7 @@ func _refresh_bg(c: Card) -> void:
 		_bg_material.set_shader_parameter("tint_a", tints.get("a", _CARD_DARK))
 		_bg_material.set_shader_parameter("tint_b", tints.get("b", _CARD_DARK))
 		_bg_material.set_shader_parameter("tint_c", tints.get("c", tints.get("b", _CARD_DARK)))
-		var tex: Dictionary = _CLASS_TEXTURE.get(class_id, _DEFAULT_TEXTURE)
+		var tex: Dictionary = _ARCANO_TEXTURE if is_arcano else _CLASS_TEXTURE.get(class_id, _DEFAULT_TEXTURE)
 		_bg_material.set_shader_parameter("pattern_mode", int(tex.get("pattern_mode", 0)))
 		_bg_material.set_shader_parameter("pixel_size", float(tex.get("pixel_size", 3.0)))
 		_bg_material.set_shader_parameter("card_size", _SIZE)
