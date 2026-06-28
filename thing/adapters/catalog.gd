@@ -1,11 +1,19 @@
-# Thing catalog: loads types from JSON, resolves ancestors, and builds prototypes.
-# Stripped of skin/visual logic — pure data-driven entity management.
+# ThingCatalog — loads ThingTypes from JSON, resolves the
+# `ancestor` chain via ThingVariant merge, caches prototypes, and
+# clones fresh instances on demand.
+#
+# Instances are pure RefCounted (Thing or ThingPart), never Nodes —
+# materialising in the scene tree is an upstream concern.
 extends Resource
 class_name ThingCatalog
 
 const KEY_ID := "id"
 const KEY_ANCESTOR := "ancestor"
 const KEY_PARTS := "parts"
+const KEY_KIND := "kind"
+
+const KIND_THING := "thing"
+const KIND_PART := "part"
 
 var _assembler: ThingAssembler = null
 var _types: Dictionary = {}
@@ -22,13 +30,9 @@ func set_assembler(assembler: ThingAssembler) -> void:
 	if assembler != null:
 		_assembler = assembler
 
-# R4 — clears every cached type, prototype, and index. Called on a module
-# switch so entities from one module never leak into the next. Orphan
-# prototype nodes are freed.
+# R4 — clears every cached type, prototype, and index. Called on a
+# module switch so entities from one module never leak into the next.
 func reset() -> void:
-	for proto: Variant in _prototypes.values():
-		if proto is Node and is_instance_valid(proto):
-			(proto as Node).queue_free()
 	_types.clear()
 	_resolved.clear()
 	_prototypes.clear()
@@ -66,6 +70,9 @@ func _has_script(script_id: String) -> bool:
 		return false
 	return _script(script_id) != null
 
+# Resolves which Script the instance should `script.new()` from.
+# Order: explicit ancestor script → inherited from parent → base
+# script for the kind ("thing" or "part_base").
 func _resolve_script_id(base: ThingType, parent: ThingType) -> String:
 	if base == null:
 		return ""
@@ -73,15 +80,20 @@ func _resolve_script_id(base: ThingType, parent: ThingType) -> String:
 		return base.ancestor
 	if parent != null and parent.script_id != "":
 		return parent.script_id
-	if _has_script("thing"):
-		return "thing"
-	Log.log(self, "error", "ThingCatalog: base script 'thing' not found.")
+	# Fallback to the kind-specific base script.
+	var base_name: String = "thing_part" if base.kind == KIND_PART else "thing"
+	if _has_script(base_name):
+		return base_name
+	Log.log(self, "error", "ThingCatalog: base script '%s' not found." % base_name)
 	return ""
 
 func _parse_type(raw: Dictionary) -> ThingType:
 	var type: ThingType = ThingType.new()
 	type.type_id = String(raw.get(KEY_ID, "")).strip_edges().to_lower()
 	type.ancestor = String(raw.get(KEY_ANCESTOR, "")).strip_edges().to_lower()
+	type.kind = String(raw.get(KEY_KIND, KIND_THING)).strip_edges().to_lower()
+	if type.kind != KIND_PART:
+		type.kind = KIND_THING
 	var parts_raw: Variant = raw.get(KEY_PARTS, [])
 	if parts_raw is Array:
 		for part in parts_raw:
@@ -93,6 +105,7 @@ func _parse_type(raw: Dictionary) -> ThingType:
 		KEY_ID: true,
 		KEY_ANCESTOR: true,
 		KEY_PARTS: true,
+		KEY_KIND: true,
 	}
 	for key in raw.keys():
 		if reserved.has(key):
@@ -144,20 +157,24 @@ func _resolve_type(type_id: String) -> ThingType:
 		return base
 	merged.type_id = base.type_id
 	merged.ancestor = base.ancestor
+	merged.kind = base.kind
 	merged.script_id = script_id
 	merged.data = _merge_data(parent.data, base.data)
 	merged.parts = _merge_parts(parent.parts, base.parts)
 	_resolved[key] = merged
 	return merged
 
-func _instantiate(script_id: String) -> Node:
+# Instantiates a Thing (or ThingPart) via `script.new()`. Returns
+# the typed base (RefCounted) — callers should check kind via the
+# resolved ThingType, not via Variant inspection.
+func _instantiate(script_id: String) -> RefCounted:
 	var script: Script = _script(script_id)
 	if script == null:
 		return null
 	return script.new()
 
-func _build_prototype(type: ThingType) -> Node:
-	var instance: Node = _instantiate(type.script_id)
+func _build_prototype(type: ThingType) -> RefCounted:
+	var instance: RefCounted = _instantiate(type.script_id)
 	if instance == null:
 		return null
 	if instance.has_method("_apply_data"):
@@ -240,6 +257,7 @@ func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 		resolved = ThingType.new()
 		resolved.type_id = base.type_id
 		resolved.ancestor = base.ancestor
+		resolved.kind = base.kind
 		resolved.script_id = script_id
 		resolved.data = _merge_data(parent.data, base.data)
 		resolved.parts = _merge_parts(parent.parts, base.parts)
@@ -294,31 +312,34 @@ func get_type(type_id: String) -> ThingType:
 func resolve_type(type_id: String) -> ThingType:
 	return _resolve_type(type_id)
 
-func create(type_id: String) -> Node:
+# Public factory. Returns Thing (the typical case) or ThingPart
+# (when the resolved type's `kind` is "part"). The caller decides
+# what to do with each — assembler.assemble() handles part attach.
+func create(type_id: String) -> RefCounted:
 	var type: ThingType = _resolve_type(type_id)
 	if type == null:
 		return null
 	if _prototypes.has(type.type_id):
-		var proto: Node = _prototypes[type.type_id]
+		var proto: RefCounted = _prototypes[type.type_id]
 		if proto and proto.has_method("clone"):
-			var clone: Node = proto.call("clone") as Node
-			if clone:
-				(_assembler as ThingAssembler).assemble(clone, type, self)
-				return clone
-	var prototype: Node = _build_prototype(type)
+			var copy: RefCounted = proto.call("clone") as RefCounted
+			if copy:
+				(_assembler as ThingAssembler).assemble(copy, type, self)
+				return copy
+	var prototype: RefCounted = _build_prototype(type)
 	if prototype == null:
 		return null
 	_prototypes[type.type_id] = prototype
 	if prototype.has_method("clone"):
-		var cloned: Node = prototype.call("clone") as Node
+		var cloned: RefCounted = prototype.call("clone") as RefCounted
 		if cloned:
 			(_assembler as ThingAssembler).assemble(cloned, type, self)
 			return cloned
 	(_assembler as ThingAssembler).assemble(prototype, type, self)
 	return prototype
 
-func build_instance(thing_id: String, script_id: String, data: Dictionary, parts: Array[String]) -> Node:
-	var instance: Node = _instantiate(script_id)
+func build_instance(thing_id: String, script_id: String, data: Dictionary, parts: Array[String]) -> RefCounted:
+	var instance: RefCounted = _instantiate(script_id)
 	if instance == null:
 		return null
 	if instance.has_method("_apply_data"):

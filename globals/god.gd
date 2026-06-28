@@ -37,10 +37,10 @@ func _ensure_thing_assets() -> void:
 
 # --- Thing System ---
 
-func create(type_id: String) -> Node:
+func create(type_id: String) -> RefCounted:
 	return _catalog.create(type_id)
 
-func build_instance(thing_id: String, script_id: String, data: Dictionary, parts: Array[String]) -> Node:
+func build_instance(thing_id: String, script_id: String, data: Dictionary, parts: Array[String]) -> RefCounted:
 	return _catalog.build_instance(thing_id, script_id, data, parts)
 
 func register_type(spec: Dictionary, replace: bool = true) -> ThingType:
