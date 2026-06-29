@@ -153,3 +153,54 @@ func _load_texture(path: String) -> Texture2D:
 	if path == "" or not ResourceLoader.exists(path):
 		return null
 	return load(path) as Texture2D
+
+# Loads a shader by short id. Defaults to `.gdshader` extension since
+# that's the only flavor used in the project; pass a different ext
+# in the future if `.shader` (visual shader) ever ships.
+func shader(shader_id: String, ext: String = "gdshader") -> Shader:
+	var key: String = String(shader_id).strip_edges()
+	if key == "":
+		return null
+	if key.begins_with("res://"):
+		return _load_shader(key)
+	var path: String = Drive.content_path(key, ext)
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return _load_shader(path)
+
+func _load_shader(path: String) -> Shader:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return load(path) as Shader
+
+# Loads a sound (AudioStream) by short id. Default ext is .ogg —
+# project standard for music + SFX. Pass a different ext for one-off
+# .mp3 / .wav assets.
+func sound(sound_id: String, ext: String = "ogg") -> AudioStream:
+	var key: String = String(sound_id).strip_edges()
+	if key == "":
+		return null
+	if key.begins_with("res://"):
+		return _load_sound(key)
+	var path: String = Drive.content_path(key, ext)
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return _load_sound(path)
+
+func _load_sound(path: String) -> AudioStream:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return load(path) as AudioStream
+
+# Reads a JSON data file by short id. Returns an empty dict on miss
+# so callers can pattern-match `.is_empty()` without nil-checks.
+func json(json_id: String) -> Dictionary:
+	var key: String = String(json_id).strip_edges()
+	if key == "":
+		return {}
+	if key.begins_with("res://"):
+		return Drive.read_content(key)
+	var path: String = Drive.content_path(key, "json")
+	if path == "":
+		return {}
+	return Drive.read_content(path)
