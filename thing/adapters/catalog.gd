@@ -63,7 +63,7 @@ func _merge_parts(base: Array[String], extra: Array[String]) -> Array[String]:
 	return results
 
 func _script(script_id: String) -> Script:
-	return God.thing_script(script_id)
+	return God.things.script(script_id)
 
 func _has_script(script_id: String) -> bool:
 	if script_id == "":
@@ -123,7 +123,7 @@ func _get_type(type_id: String) -> ThingType:
 		return null
 	if _types.has(key):
 		return _types[key]
-	var raw: Dictionary = God.thing_content(key)
+	var raw: Dictionary = God.things.content(key)
 	if raw.is_empty() or not _is_thing_payload(raw):
 		return null
 	var parsed: ThingType = _parse_type(raw)
@@ -184,7 +184,7 @@ func _build_prototype(type: ThingType) -> RefCounted:
 func _build_index() -> void:
 	if not _index.is_empty():
 		return
-	var all: Array[Dictionary] = God.all_content()
+	var all: Array[Dictionary] = God.media.all_content()
 	for raw: Dictionary in all:
 		if not _is_thing_payload(raw):
 			continue

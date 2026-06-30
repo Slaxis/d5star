@@ -58,7 +58,7 @@ func _goto(step_id: String) -> void:
 				sig.disconnect(_on_transition_requested)
 
 	var scene_file: String = String(step.get("scene_file", ""))
-	var packed: PackedScene = God.scene(scene_file)
+	var packed: PackedScene = God.media.scene(scene_file)
 	if packed == null:
 		Log.log(self, "error", "Flow: scene_file '%s' not found for step '%s'." % [scene_file, step_id])
 		_transitioning = false

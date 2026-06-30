@@ -10,12 +10,12 @@ func _ready() -> void:
 	pass
 
 func load_rules() -> void:
-	rules = God.rules()
+	rules = God.rules.current()
 
 func scene(scene_id: String) -> PackedScene:
 	if scenes.has(scene_id):
 		return scenes[scene_id]
-	var the_scene: PackedScene = God.scene(scene_id)
+	var the_scene: PackedScene = God.media.scene(scene_id)
 	if the_scene:
 		scenes[scene_id] = the_scene
 	return the_scene
@@ -72,4 +72,4 @@ func restore(save: Dictionary) -> void:
 		if entry is Dictionary:
 			specs.append(entry)
 	if not specs.is_empty():
-		God.load_types(specs)
+		God.things.load_types(specs)
