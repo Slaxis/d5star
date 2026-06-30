@@ -13,6 +13,7 @@ const SCENE_EXTENSION := "tscn"
 var engine_root: String = RES_ROOT + "engine"
 var game_root: String = RES_ROOT + "game"
 var parsers_subpath: String = "globals/drive/parser/parsers"
+var loaders_subpath: String = "globals/drive/loader/loaders"
 var things_subpath: String = "thing/things"
 var thing_base_subpath: String = "thing/thing.gd"
 var scene_dir_id: String = "scene"
@@ -22,6 +23,7 @@ func configure(config: Dictionary) -> void:
 	engine_root = RES_ROOT + String(config.get("engine_root", "engine"))
 	game_root = RES_ROOT + String(config.get("game_root", "game"))
 	parsers_subpath = String(config.get("parsers", parsers_subpath))
+	loaders_subpath = String(config.get("loaders", loaders_subpath))
 	things_subpath = String(config.get("things", things_subpath))
 	thing_base_subpath = String(config.get("thing_base", thing_base_subpath))
 	scene_dir_id = String(config.get("scene_dir", scene_dir_id))
@@ -94,6 +96,9 @@ func _find_content_asset_multi(file_name: String, extension: String) -> String:
 
 func parsers_root() -> String:
 	return engine_root + "/" + parsers_subpath
+
+func loaders_root() -> String:
+	return engine_root + "/" + loaders_subpath
 
 func things_path() -> String:
 	return engine_root + "/" + things_subpath

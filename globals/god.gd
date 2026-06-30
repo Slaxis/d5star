@@ -1,39 +1,21 @@
-# Coordinator for the Thing system and content resolver.
-# Layer: The -> God -> Drive.
+# Coordinator for the Thing system + thin typed-media facade over
+# Drive. Layer: The → God → Drive. God owns ZERO loading: every
+# media call is a one-line delegate to Drive, and Drive routes
+# through the right Manager (ResourceManager / Loader / etc).
 extends Node
 
 var _catalog: ThingCatalog = null
-var _thing_assets: Dictionary = {}
-var _thing_assets_ready: bool = false
 
 func _ready() -> void:
 	_catalog = ThingCatalog.new()
 	Drive.active_module_changed.connect(_on_module_changed)
 
-# R4 — Thing types, prototypes, and indices are module-scoped. Clearing
-# them on a module switch prevents entities from leaking across modules.
+# R4 — Thing types/prototypes/indices are module-scoped. Clearing on
+# module switch prevents entities from leaking across modules. The
+# resource cache reset is Drive's responsibility (it owns ResourceManager).
 func _on_module_changed(_module_id: String) -> void:
 	if _catalog != null:
 		_catalog.reset()
-	_thing_assets.clear()
-	_thing_assets_ready = false
-
-func _key(id: String) -> String:
-	return String(id).strip_edges().to_lower()
-
-func _ensure_thing_assets() -> void:
-	if _thing_assets_ready:
-		return
-	_thing_assets_ready = true
-	_thing_assets.clear()
-	var root: String = Drive.things_path()
-	if root == "":
-		return
-	var assets: Array[Asset] = Drive.list(root)
-	for asset in assets:
-		if asset.kind != "gd":
-			continue
-		_thing_assets[_key(asset.id)] = asset
 
 # --- Thing System ---
 
@@ -55,20 +37,11 @@ func list_by_group(group_id: String) -> Array[String]:
 func resolve_type(type_id: String) -> ThingType:
 	return _catalog.resolve_type(type_id)
 
+# Thing-script lookup by short id. Drive.script_by_id handles base
+# scripts (key == "thing"), AssetManager lookup, and lazy scan via
+# the things_asset_root hint.
 func thing_script(script_id: String) -> Script:
-	var key: String = _key(script_id)
-	if key == "":
-		return null
-	if key == "thing":
-		var base_path: String = Drive.thing_base_script()
-		if base_path == "" or not ResourceLoader.exists(base_path):
-			return null
-		return load(base_path) as Script
-	_ensure_thing_assets()
-	var asset: Asset = _thing_assets.get(key, null)
-	if asset == null:
-		return null
-	return load(asset.path) as Script
+	return Drive.script_by_id(script_id, Drive.things_path())
 
 # --- Content resolvers ---
 
@@ -77,12 +50,6 @@ func rules() -> Rules:
 	if new_rules == null:
 		return Rules.new()
 	return new_rules
-
-func scene(scene_id: String) -> PackedScene:
-	var path: String = Drive.scene(scene_id)
-	if path == "":
-		return null
-	return load(path) as PackedScene
 
 func all_content() -> Array[Dictionary]:
 	return Drive.list_all_content()
@@ -99,108 +66,26 @@ func thing_data(thing_id: String) -> Dictionary:
 		return runtime
 	return Drive.read_content(Drive.content_path(thing_id))
 
-# --- Typed resolvers (script / texture / scene / json / shader) -----------
+# --- Typed media facades — all one-line delegates to Drive --------------
 #
-# Game and engine code consumes media via these typed facades — never a
-# `res://` path. JSON data files reference scripts by `class_name` and
-# assets by short ID; God resolves them via Godot's global class registry
-# (scripts) or Drive.content_path (textures / shaders / json data files).
-#
-# See `docs/BACKLOG.md` §B-001 for the convention rationale.
+# Game/engine code uses these and never touches Drive directly for media
+# resolution. JSON references things by short ID or class_name; God ↔
+# Drive ↔ ResourceManager handles the rest. See docs/D5STAR.md §8.
 
-var _script_class_cache: Dictionary = {}    # class_name -> Script
-
-# Resolves a GDScript class_name to its Script resource. Reads Godot's
-# project-wide class list (populated by every `class_name X` declaration
-# at boot), so any subclass — engine, module, or modder-supplied — is
-# discoverable without hardcoding paths.
 func script(class_name_str: String) -> Script:
-	var key: String = String(class_name_str).strip_edges()
-	if key == "":
-		return null
-	if _script_class_cache.has(key):
-		return _script_class_cache[key]
-	for entry: Dictionary in ProjectSettings.get_global_class_list():
-		if String(entry.get("class", "")) == key:
-			var path: String = String(entry.get("path", ""))
-			if path == "":
-				return null
-			var loaded: Script = load(path) as Script
-			_script_class_cache[key] = loaded
-			return loaded
-	push_warning("God.script: unknown class_name '%s'" % key)
-	_script_class_cache[key] = null
-	return null
+	return Drive.script(class_name_str)
 
-# Loads a texture by short id (no `res://`). Defers to Drive.content_path
-# to find the file on disk via the project's content layout conventions.
-# Accepts a fallback path for caller-side defaults — falls back when the
-# id can't be resolved.
-func texture(texture_id: String, fallback_path: String = "") -> Texture2D:
-	var key: String = String(texture_id).strip_edges()
-	if key == "":
-		return _load_texture(fallback_path)
-	if key.begins_with("res://"):
-		# Caller passed a raw path — kept as an escape hatch for migration,
-		# but it should be rare. The right pattern is short ids.
-		return _load_texture(key)
-	var path: String = Drive.content_path(key, "png")
-	if path == "" or not ResourceLoader.exists(path):
-		return _load_texture(fallback_path)
-	return _load_texture(path)
+func texture(asset_id: String, extension: String = "png") -> Texture2D:
+	return Drive.texture(asset_id, extension)
 
-func _load_texture(path: String) -> Texture2D:
-	if path == "" or not ResourceLoader.exists(path):
-		return null
-	return load(path) as Texture2D
+func shader(asset_id: String, extension: String = "gdshader") -> Shader:
+	return Drive.shader(asset_id, extension)
 
-# Loads a shader by short id. Defaults to `.gdshader` extension since
-# that's the only flavor used in the project; pass a different ext
-# in the future if `.shader` (visual shader) ever ships.
-func shader(shader_id: String, ext: String = "gdshader") -> Shader:
-	var key: String = String(shader_id).strip_edges()
-	if key == "":
-		return null
-	if key.begins_with("res://"):
-		return _load_shader(key)
-	var path: String = Drive.content_path(key, ext)
-	if path == "" or not ResourceLoader.exists(path):
-		return null
-	return _load_shader(path)
+func sound(asset_id: String, extension: String = "ogg") -> AudioStream:
+	return Drive.sound(asset_id, extension)
 
-func _load_shader(path: String) -> Shader:
-	if path == "" or not ResourceLoader.exists(path):
-		return null
-	return load(path) as Shader
+func scene(scene_id: String) -> PackedScene:
+	return Drive.scene(scene_id)
 
-# Loads a sound (AudioStream) by short id. Default ext is .ogg —
-# project standard for music + SFX. Pass a different ext for one-off
-# .mp3 / .wav assets.
-func sound(sound_id: String, ext: String = "ogg") -> AudioStream:
-	var key: String = String(sound_id).strip_edges()
-	if key == "":
-		return null
-	if key.begins_with("res://"):
-		return _load_sound(key)
-	var path: String = Drive.content_path(key, ext)
-	if path == "" or not ResourceLoader.exists(path):
-		return null
-	return _load_sound(path)
-
-func _load_sound(path: String) -> AudioStream:
-	if path == "" or not ResourceLoader.exists(path):
-		return null
-	return load(path) as AudioStream
-
-# Reads a JSON data file by short id. Returns an empty dict on miss
-# so callers can pattern-match `.is_empty()` without nil-checks.
-func json(json_id: String) -> Dictionary:
-	var key: String = String(json_id).strip_edges()
-	if key == "":
-		return {}
-	if key.begins_with("res://"):
-		return Drive.read_content(key)
-	var path: String = Drive.content_path(key, "json")
-	if path == "":
-		return {}
-	return Drive.read_content(path)
+func json(asset_id: String) -> Dictionary:
+	return Drive.json(asset_id)

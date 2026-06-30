@@ -9,6 +9,7 @@
   "system": "system",
   "game_config": "game",
   "parsers": "globals/drive/parser/parsers",
+  "loaders": "globals/drive/loader/loaders",
   "things": "thing/things",
   "thing_base": "thing/thing.gd",
   "scene_dir": "scene"

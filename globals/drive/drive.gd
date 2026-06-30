@@ -1,4 +1,9 @@
-# Service locator for parsers, assets, path resolution, and module management.
+# Service locator for parsers, loaders, assets, path resolution,
+# module management, defs. Routes every typed resource lookup
+# through the appropriate Manager — game/engine code never touches
+# `load()`, `ResourceLoader`, `FileAccess`, or `ProjectSettings`
+# directly. The only escape is `_bootstrap_json` below, used to
+# read the engine config before ResourceManager exists.
 extends Node
 
 const ENGINE_CONFIG := "res://engine/d5star/engine.json"
@@ -8,23 +13,20 @@ signal active_module_changed(module_id: String)
 var _managers: Dictionary = {}  # manager_id -> Manager
 var _module_id: String = ""
 
-# --- Utilities ---
+# --- Bootstrap (only for engine config — ResourceManager isn't alive yet) ---
 
-func _read_json(path: String) -> Dictionary:
+func _bootstrap_json(path: String) -> Dictionary:
 	if path == "":
 		return {}
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		Log.log(self, "error", "Drive: Failed to open JSON: " + path)
+		Log.log(self, "error", "Drive: failed to open bootstrap JSON: " + path)
 		return {}
 	var text: String = file.get_as_text()
 	var parsed: Variant = JSON.parse_string(text)
-	if parsed == null:
-		Log.log(self, "error", "Drive: Failed to parse JSON: " + path)
-		return {}
 	if parsed is Dictionary:
 		return parsed
-	Log.log(self, "error", "Drive: JSON root must be an object: " + path)
+	Log.log(self, "error", "Drive: bootstrap JSON parse failed: " + path)
 	return {}
 
 func _scan_files(root: String, ext: String, results: Array[String]) -> void:
@@ -63,7 +65,7 @@ func _m(id: String) -> Manager:
 # --- Boot ---
 
 func _load_engine_config() -> Dictionary:
-	return _read_json(ENGINE_CONFIG)
+	return _bootstrap_json(ENGINE_CONFIG)
 
 func _get_resource(resource_id: String) -> Resource:
 	var pr := _m(ParserManager.ID) as ParserManager
@@ -79,6 +81,7 @@ func _set_managers() -> void:
 		return
 	var config: Dictionary = _load_engine_config()
 	_register(ParserManager.new())
+	_register(ResourceManager.new())
 	_register(AssetManager.new())
 	var pm := PathManager.new()
 	pm.configure(config)
@@ -91,9 +94,11 @@ func _set_managers() -> void:
 	_register(dm)
 	var am: AssetManager = _m(AssetManager.ID) as AssetManager
 	var pr: ParserManager = _m(ParserManager.ID) as ParserManager
-	if am == null or pm == null or pr == null:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if am == null or pm == null or pr == null or rm == null:
 		return
 	pr.register_from_assets(am.list(pm.parsers_root()))
+	rm.register_from_assets(am.list(pm.loaders_root()))
 	dm.scan()
 
 func _ready() -> void:
@@ -138,6 +143,11 @@ func set_module(id: String) -> bool:
 	var dm: DefManager = _m(DefManager.ID) as DefManager
 	if dm != null:
 		dm.apply_module_overrides(content_roots)
+	# Resource cache is module-scoped — paths shift on switch, stale
+	# entries would silently return the wrong module's assets.
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if rm != null:
+		rm.reset()
 	_module_id = key
 	active_module_changed.emit(key)
 	return true
@@ -165,7 +175,7 @@ func lookup(asset_id: String) -> Asset:
 		am.list(pm.parsers_root())
 	return am.lookup(asset_id)
 
-# --- Resource API ---
+# --- Resource API (Parser-driven typed Resources) ---
 
 func rules() -> Rules:
 	return _get_resource("rules") as Rules
@@ -213,8 +223,105 @@ func thing_base_script() -> String:
 		return ""
 	return pm.thing_base_script()
 
+# --- Typed media API (Loader-backed) ---
+#
+# Every method below resolves an id → path via PathManager, then
+# delegates to ResourceManager.load_resource which dispatches to the
+# right Loader. Callers never see paths and never call load().
+
+func texture(asset_id: String, extension: String = "png") -> Texture2D:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if rm == null:
+		return null
+	var path: String = content_path(asset_id, extension)
+	if path == "":
+		return null
+	return rm.load_resource(path) as Texture2D
+
+func shader(asset_id: String, extension: String = "gdshader") -> Shader:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if rm == null:
+		return null
+	var path: String = content_path(asset_id, extension)
+	if path == "":
+		return null
+	return rm.load_resource(path) as Shader
+
+func sound(asset_id: String, extension: String = "ogg") -> AudioStream:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if rm == null:
+		return null
+	var path: String = content_path(asset_id, extension)
+	if path == "":
+		return null
+	return rm.load_resource(path) as AudioStream
+
+func scene(scene_id: String) -> PackedScene:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	var pm: PathManager = _m(PathManager.ID) as PathManager
+	if rm == null or pm == null:
+		return null
+	var path: String = pm.scene_path(scene_id, directories())
+	if path == "":
+		return null
+	return rm.load_resource(path) as PackedScene
+
+# class_name → Script via ResourceManager.resolve_class. Used for
+# JSON entries like `"class": "GuanabaraMapGen"`.
+func script(class_name_str: String) -> Script:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if rm == null:
+		return null
+	var path: String = rm.resolve_class(class_name_str)
+	if path == "":
+		push_warning("Drive.script: unknown class_name '%s'" % class_name_str)
+		return null
+	return rm.load_resource(path) as Script
+
+# Thing-script lookup by short id (e.g. "card", "creature"). Special
+# case "thing"/"thing_part" resolve to the engine base. Other ids
+# resolve via AssetManager scanning `things_path()`.
+func script_by_id(id: String, things_asset_root: String = "") -> Script:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	var am: AssetManager = _m(AssetManager.ID) as AssetManager
+	if rm == null or am == null:
+		return null
+	var key: String = String(id).strip_edges().to_lower()
+	if key == "":
+		return null
+	if key == "thing":
+		var base_path: String = thing_base_script()
+		if base_path == "":
+			return null
+		return rm.load_resource(base_path) as Script
+	var asset: Asset = am.lookup(key)
+	if asset == null and things_asset_root != "":
+		am.list(things_asset_root)
+		asset = am.lookup(key)
+	if asset == null:
+		return null
+	return rm.load_resource(asset.path) as Script
+
+func json(asset_id: String) -> Dictionary:
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if rm == null:
+		return {}
+	var path: String = content_path(asset_id, "json")
+	if path == "":
+		return {}
+	var raw: Variant = rm.load_resource(path)
+	return raw if raw is Dictionary else {}
+
+# Raw JSON path read — for callers that already resolved the path
+# (the content-scan iterators below). Goes through ResourceManager
+# so caching + dispatch still apply.
 func read_content(path: String) -> Dictionary:
-	return _read_json(path)
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	if rm == null:
+		# Pre-init fallback (should never trigger in normal boot).
+		return _bootstrap_json(path)
+	var raw: Variant = rm.load_resource(path)
+	return raw if raw is Dictionary else {}
 
 func list_all_content() -> Array[Dictionary]:
 	var results: Array[Dictionary] = []
@@ -222,7 +329,7 @@ func list_all_content() -> Array[Dictionary]:
 		var paths: Array[String] = []
 		_scan_files(root, "json", paths)
 		for path: String in paths:
-			var raw: Dictionary = _read_json(path)
+			var raw: Dictionary = read_content(path)
 			if not raw.is_empty():
 				results.append(raw)
 	return results
@@ -236,15 +343,9 @@ func list_json_by_group(group_id: String) -> Array[Dictionary]:
 		var paths: Array[String] = []
 		_scan_files(root, "json", paths)
 		for path: String in paths:
-			var raw: Dictionary = _read_json(path)
+			var raw: Dictionary = read_content(path)
 			if raw.is_empty():
 				continue
 			if String(raw.get("group", "")).strip_edges().to_lower() == group:
 				results.append(raw)
 	return results
-
-func scene(scene_id: String) -> String:
-	var pm: PathManager = _m(PathManager.ID) as PathManager
-	if pm == null:
-		return ""
-	return pm.scene_path(scene_id, directories())
