@@ -7,7 +7,7 @@
 # Lightweight RefCounted. Unlike the Thing-as-Node approach this
 # replaced, a Part is NOT in the scene tree, has no _process, no
 # signals beyond what it subscribes to. Many parts per Thing is
-# cheap. Attach wires the part into the Thing's local `Air` bus.
+# cheap. Attach wires the part into the Thing's local `mind` bus.
 #
 # Lifetime is coupled to the parent Thing via attach/detach. A Part
 # can outlive its Thing in principle (it's RefCounted), but should
@@ -35,14 +35,14 @@ func attach(t: Thing) -> void:
 		push_warning("ThingPart.attach: part %s already attached to %s; detach first." % [part_id, big_thing.thing_id])
 		return
 	big_thing = t
-	if t.thought_air != null and not t.thought_air.on_command.is_connected(_on_thought):
-		t.thought_air.on_command.connect(_on_thought)
+	if t.mind != null and not t.mind.on_command.is_connected(_on_thought):
+		t.mind.on_command.connect(_on_thought)
 
 func detach() -> void:
 	if big_thing == null:
 		return
-	if big_thing.thought_air != null and big_thing.thought_air.on_command.is_connected(_on_thought):
-		big_thing.thought_air.on_command.disconnect(_on_thought)
+	if big_thing.mind != null and big_thing.mind.on_command.is_connected(_on_thought):
+		big_thing.mind.on_command.disconnect(_on_thought)
 	big_thing = null
 
 # Shallow clone — same contract as Thing.clone(). The new part has

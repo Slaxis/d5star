@@ -1,19 +1,20 @@
-# Air — typed command bus. Same class used by:
+# Bus — typed pub/sub command bus. Same implementation used in two
+# scopes:
 #
-#   - The global `GlobalAir` autoload (world bus). A Node adapter
-#     wraps this to add `dispatch_deferred` (Node-only sugar).
-#   - Every Thing's local `thought_air` (thought bus). Per-Thing
-#     RefCounted instance — no scene tree, no _process overhead.
+#   - The global `Air` autoload (world bus). A Node adapter wraps
+#     this to add `dispatch_deferred` (Node-only sugar).
+#   - Every Thing's local `mind` (thought bus). Per-Thing RefCounted
+#     instance — no scene tree, no _process overhead.
 #
-# One implementation, two scopes. Callers subscribe to a specific
-# `cmd_type` and receive only those; or connect to the `on_command`
-# signal to receive every dispatch.
+# One primitive, two scopes. Subscribers listen to a specific
+# `cmd_type` OR connect to the `on_command` signal to receive
+# every dispatch.
 #
 # Semantic mapping in Thing:
-#   Thing.think(thought)  → thought_air.dispatch(thought)  (local)
-#   Thing.say(message)    → GlobalAir.dispatch(message)    (global)
+#   Thing.think(thought)  → mind.dispatch(thought)   (local)
+#   Thing.say(message)    → Air.dispatch(message)     (global)
 extends RefCounted
-class_name Air
+class_name Bus
 
 signal on_command(cmd: Cmd)
 
