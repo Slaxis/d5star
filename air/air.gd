@@ -1,5 +1,19 @@
-# Global typed command bus with per-type channel subscriptions.
-extends Node
+# Air — typed command bus. Same class used by:
+#
+#   - The global `GlobalAir` autoload (world bus). A Node adapter
+#     wraps this to add `dispatch_deferred` (Node-only sugar).
+#   - Every Thing's local `thought_air` (thought bus). Per-Thing
+#     RefCounted instance — no scene tree, no _process overhead.
+#
+# One implementation, two scopes. Callers subscribe to a specific
+# `cmd_type` and receive only those; or connect to the `on_command`
+# signal to receive every dispatch.
+#
+# Semantic mapping in Thing:
+#   Thing.think(thought)  → thought_air.dispatch(thought)  (local)
+#   Thing.say(message)    → GlobalAir.dispatch(message)    (global)
+extends RefCounted
+class_name Air
 
 signal on_command(cmd: Cmd)
 
@@ -23,10 +37,8 @@ func dispatch(cmd: Cmd) -> void:
 		if (fn as Callable).is_valid():
 			(fn as Callable).call(cmd)
 
-func dispatch_deferred(cmd: Cmd) -> void:
-	if cmd != null and cmd.type != &"":
-		call_deferred("dispatch", cmd)
-
+# Convenience: build a Cmd from a raw dict (`type` or `cmd` key
+# names the command, everything else becomes payload) and dispatch.
 func dispatch_raw(payload: Dictionary) -> void:
 	if payload.is_empty():
 		return

@@ -1,6 +1,15 @@
 # Thing — the main runtime abstraction. An entity in the game world,
 # resolved from a ThingType, holding data + a list of plugged-in
-# ThingParts, and dispatching thoughts through its local ThingAir.
+# ThingParts, and dispatching messages through two buses:
+#
+#   - `thought_air` (local Air) — internal thoughts, heard by self
+#     and by its Parts only. Fired via `think(thought)`.
+#   - `GlobalAir` (world bus, autoload) — external broadcasts, heard
+#     by any subscriber in the world. Fired via `say(message)`.
+#
+# Same `Air` class implements both; the difference is scope. Verbs
+# follow the original scrap-warriors design: `think` for cogitation,
+# `say` for broadcast — an explicit decision the Thing makes.
 #
 # Pure RefCounted, no Node. When something needs to be visible in
 # the scene tree, an upstream layer wraps a Thing in a Node-based
@@ -14,10 +23,10 @@ class_name Thing
 var thing_id: String = ""
 var ancestor: String = ""
 var parts: Array[ThingPart] = []
-var thought_air: ThingAir = null
+var thought_air: Air = null
 
 func _init() -> void:
-	thought_air = ThingAir.new()
+	thought_air = Air.new()
 
 # Called by the catalog after instantiation to seed the Thing with
 # its resolved id / ancestor / merged data. Kept as a method (not a
@@ -44,13 +53,20 @@ func remove_part(part: ThingPart) -> void:
 	part.detach()
 	parts.erase(part)
 
-# Dispatch a thought through the local bus. Every plugged part hears
-# it via the ThingAir signal (parts.attach subscribes them); the
-# Thing itself can also override `_on_thought` to react. This is the
-# Qud-style duck-typed event flow.
-func think(cmd: Cmd) -> void:
+# Dispatch a thought through the LOCAL bus. Every plugged part
+# hears it via the thought_air signal (parts.attach subscribes them);
+# the Thing itself can also override `_on_thought` to react. This
+# is the Qud-style duck-typed event flow, kept internal.
+func think(thought: Cmd) -> void:
 	if thought_air != null:
-		thought_air.dispatch(cmd)
+		thought_air.dispatch(thought)
+
+# Broadcast a message through the GLOBAL bus. Anyone subscribed to
+# GlobalAir receives it — world systems (log, achievements, HUD,
+# replay) hear it without knowing about this Thing. Say what you
+# want the world to hear; keep everything else inside `think`.
+func say(message: Cmd) -> void:
+	GlobalAir.dispatch(message)
 
 # Shallow clone — used by the catalog's prototype pattern. Creates a
 # fresh Thing with the same id / ancestor / data; parts are NOT

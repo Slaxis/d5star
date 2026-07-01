@@ -1,12 +1,13 @@
 # ThingPart — a behavior plugged into a Thing. Holds its own data,
-# reacts to the Thing's thoughts via a duck-typed `_on_thought`
-# override, and can be inherited just like a Thing (same catalog,
-# same ancestor chain, same ThingVariant merge).
+# reacts to the Thing's thoughts (dispatched via `Thing.think`) via
+# a duck-typed `_on_thought` override, and can be inherited just
+# like a Thing (same catalog, same ancestor chain, same ThingVariant
+# merge).
 #
 # Lightweight RefCounted. Unlike the Thing-as-Node approach this
 # replaced, a Part is NOT in the scene tree, has no _process, no
 # signals beyond what it subscribes to. Many parts per Thing is
-# cheap.
+# cheap. Attach wires the part into the Thing's local `Air` bus.
 #
 # Lifetime is coupled to the parent Thing via attach/detach. A Part
 # can outlive its Thing in principle (it's RefCounted), but should
