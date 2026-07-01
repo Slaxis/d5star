@@ -11,6 +11,7 @@ const KEY_ID := "id"
 const KEY_ANCESTOR := "ancestor"
 const KEY_PARTS := "parts"
 const KEY_KIND := "kind"
+const KEY_ABSTRACT := "abstract"
 
 const KIND_THING := "thing"
 const KIND_PART := "part"
@@ -94,6 +95,7 @@ func _parse_type(raw: Dictionary) -> ThingType:
 	type.kind = String(raw.get(KEY_KIND, KIND_THING)).strip_edges().to_lower()
 	if type.kind != KIND_PART:
 		type.kind = KIND_THING
+	type.is_abstract = bool(raw.get(KEY_ABSTRACT, false))
 	var parts_raw: Variant = raw.get(KEY_PARTS, [])
 	if parts_raw is Array:
 		for part in parts_raw:
@@ -106,6 +108,7 @@ func _parse_type(raw: Dictionary) -> ThingType:
 		KEY_ANCESTOR: true,
 		KEY_PARTS: true,
 		KEY_KIND: true,
+		KEY_ABSTRACT: true,
 	}
 	for key in raw.keys():
 		if reserved.has(key):
@@ -158,6 +161,10 @@ func _resolve_type(type_id: String) -> ThingType:
 	merged.type_id = base.type_id
 	merged.ancestor = base.ancestor
 	merged.kind = base.kind
+	# `abstract` is per-Thing — RimWorld semantics: a concrete child
+	# does NOT inherit the flag from its abstract parent. Take only
+	# the base's own value.
+	merged.is_abstract = base.is_abstract
 	merged.script_id = script_id
 	merged.data = _merge_data(parent.data, base.data)
 	merged.parts = _merge_parts(parent.parts, base.parts)
@@ -258,6 +265,7 @@ func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 		resolved.type_id = base.type_id
 		resolved.ancestor = base.ancestor
 		resolved.kind = base.kind
+		resolved.is_abstract = base.is_abstract  # per-Thing, not inherited
 		resolved.script_id = script_id
 		resolved.data = _merge_data(parent.data, base.data)
 		resolved.parts = _merge_parts(parent.parts, base.parts)
@@ -313,11 +321,17 @@ func resolve_type(type_id: String) -> ThingType:
 	return _resolve_type(type_id)
 
 # Public factory. Returns Thing (the typical case) or ThingPart
-# (when the resolved type's `kind` is "part"). The caller decides
+# (when the resolved type's `kind` is "part"). Returns null for
+# abstract types (template-only; only their descendants can be
+# instantiated — RimWorld-style Abstract flag). The caller decides
 # what to do with each — assembler.assemble() handles part attach.
 func create(type_id: String) -> RefCounted:
 	var type: ThingType = _resolve_type(type_id)
 	if type == null:
+		return null
+	if type.is_abstract:
+		Log.log(self, "warning",
+			"ThingCatalog: cannot instantiate abstract type '%s' (template only)" % type.type_id)
 		return null
 	if _prototypes.has(type.type_id):
 		var proto: RefCounted = _prototypes[type.type_id]

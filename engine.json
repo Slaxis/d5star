@@ -12,6 +12,7 @@
   "loaders": "globals/drive/loader/loaders",
   "validators": "globals/drive/validator/validators",
   "things": "thing/things",
-  "thing_base": "thing/thing.gd",
+  "thing_base": "thing/data/thing.gd",
+  "thing_part_base": "thing/data/thing_part.gd",
   "scene_dir": "scene"
 }

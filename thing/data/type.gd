@@ -15,6 +15,7 @@ var type_id: String = ""
 var ancestor: String = ""
 var script_id: String = ""
 var kind: String = "thing"          # "thing" | "part"
+var is_abstract: bool = false        # true = template, cannot be instantiated (see ThingCatalog.create)
 var data: Dictionary = {}
 var parts: Array[String] = []        # list of part type_ids (only meaningful when kind == "thing")
 

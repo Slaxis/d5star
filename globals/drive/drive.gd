@@ -306,6 +306,11 @@ func script_by_id(id: String, things_asset_root: String = "") -> Script:
 		if base_path == "":
 			return null
 		return rm.load_resource(base_path) as Script
+	if key == "thing_part":
+		var pm: PathManager = _m(PathManager.ID) as PathManager
+		if pm == null:
+			return null
+		return rm.load_resource(pm.thing_part_base_script()) as Script
 	var asset: Asset = am.lookup(key)
 	if asset == null and things_asset_root != "":
 		am.list(things_asset_root)

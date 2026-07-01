@@ -16,7 +16,8 @@ var parsers_subpath: String = "globals/drive/parser/parsers"
 var loaders_subpath: String = "globals/drive/loader/loaders"
 var validators_subpath: String = "globals/drive/validator/validators"
 var things_subpath: String = "thing/things"
-var thing_base_subpath: String = "thing/thing.gd"
+var thing_base_subpath: String = "thing/data/thing.gd"
+var thing_part_base_subpath: String = "thing/data/thing_part.gd"
 var scene_dir_id: String = "scene"
 var game_config_name: String = "game"
 
@@ -28,6 +29,7 @@ func configure(config: Dictionary) -> void:
 	validators_subpath = String(config.get("validators", validators_subpath))
 	things_subpath = String(config.get("things", things_subpath))
 	thing_base_subpath = String(config.get("thing_base", thing_base_subpath))
+	thing_part_base_subpath = String(config.get("thing_part_base", thing_part_base_subpath))
 	scene_dir_id = String(config.get("scene_dir", scene_dir_id))
 	game_config_name = String(config.get("game_config", game_config_name))
 
@@ -110,6 +112,9 @@ func things_path() -> String:
 
 func thing_base_script() -> String:
 	return engine_root + "/" + thing_base_subpath
+
+func thing_part_base_script() -> String:
+	return engine_root + "/" + thing_part_base_subpath
 
 func resolve_resource_path(resource_id: String) -> String:
 	var key: String = resource_id.to_lower()
