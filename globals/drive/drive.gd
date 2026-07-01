@@ -82,6 +82,7 @@ func _set_managers() -> void:
 	var config: Dictionary = _load_engine_config()
 	_register(ParserManager.new())
 	_register(ResourceManager.new())
+	_register(ValidatorManager.new())
 	_register(AssetManager.new())
 	var pm := PathManager.new()
 	pm.configure(config)
@@ -95,10 +96,12 @@ func _set_managers() -> void:
 	var am: AssetManager = _m(AssetManager.ID) as AssetManager
 	var pr: ParserManager = _m(ParserManager.ID) as ParserManager
 	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
-	if am == null or pm == null or pr == null or rm == null:
+	var vm: ValidatorManager = _m(ValidatorManager.ID) as ValidatorManager
+	if am == null or pm == null or pr == null or rm == null or vm == null:
 		return
 	pr.register_from_assets(am.list(pm.parsers_root()))
 	rm.register_from_assets(am.list(pm.loaders_root()))
+	vm.register_from_assets(am.list(pm.validators_root()))
 	dm.scan()
 
 func _ready() -> void:
@@ -154,6 +157,15 @@ func set_module(id: String) -> bool:
 
 func active_module() -> String:
 	return _module_id
+
+# Runs every registered Validator against the given ThingHub (which
+# carries the catalog + Drive access). Returns the aggregated list of
+# broken-ref messages. Called by ThingHub at end of module change.
+func validate_content(hub: ThingHub) -> Array[String]:
+	var vm: ValidatorManager = _m(ValidatorManager.ID) as ValidatorManager
+	if vm == null:
+		return []
+	return vm.validate(hub)
 
 # --- Asset API ---
 

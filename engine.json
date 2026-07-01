@@ -10,6 +10,7 @@
   "game_config": "game",
   "parsers": "globals/drive/parser/parsers",
   "loaders": "globals/drive/loader/loaders",
+  "validators": "globals/drive/validator/validators",
   "things": "thing/things",
   "thing_base": "thing/thing.gd",
   "scene_dir": "scene"

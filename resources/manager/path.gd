@@ -14,6 +14,7 @@ var engine_root: String = RES_ROOT + "engine"
 var game_root: String = RES_ROOT + "game"
 var parsers_subpath: String = "globals/drive/parser/parsers"
 var loaders_subpath: String = "globals/drive/loader/loaders"
+var validators_subpath: String = "globals/drive/validator/validators"
 var things_subpath: String = "thing/things"
 var thing_base_subpath: String = "thing/thing.gd"
 var scene_dir_id: String = "scene"
@@ -24,6 +25,7 @@ func configure(config: Dictionary) -> void:
 	game_root = RES_ROOT + String(config.get("game_root", "game"))
 	parsers_subpath = String(config.get("parsers", parsers_subpath))
 	loaders_subpath = String(config.get("loaders", loaders_subpath))
+	validators_subpath = String(config.get("validators", validators_subpath))
 	things_subpath = String(config.get("things", things_subpath))
 	thing_base_subpath = String(config.get("thing_base", thing_base_subpath))
 	scene_dir_id = String(config.get("scene_dir", scene_dir_id))
@@ -99,6 +101,9 @@ func parsers_root() -> String:
 
 func loaders_root() -> String:
 	return engine_root + "/" + loaders_subpath
+
+func validators_root() -> String:
+	return engine_root + "/" + validators_subpath
 
 func things_path() -> String:
 	return engine_root + "/" + things_subpath

@@ -14,10 +14,18 @@ func _init() -> void:
 	_catalog = ThingCatalog.new()
 
 # R4 — wipe types/prototypes/indices on module switch so entities
-# from one module don't leak into the next.
+# from one module don't leak into the next. Then run the cross-ref
+# validation pass so broken references (typos, missing base types,
+# unknown class_names) surface immediately as warnings.
 func on_module_changed() -> void:
 	if _catalog != null:
 		_catalog.reset()
+	_run_validation()
+
+func _run_validation() -> void:
+	var issues: Array[String] = Drive.validate_content(self)
+	for issue: String in issues:
+		Log.log(self, "warning", "[CrossRef] " + issue)
 
 # --- Lifecycle ---
 
