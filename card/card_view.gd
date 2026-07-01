@@ -579,12 +579,14 @@ func _refresh_bg(c: Card) -> void:
 	var category: String = String(c.payload.get("category", ""))
 	var is_arcano: bool = category == "arcano"
 	var class_id: String = String(c.payload.get("class_id", ""))
-	# Start-tile cards (and any future single-casta deck) don't set
-	# `payload.class_id` — they live in their own deck and only
-	# declare their casta via top-level `class_affinity`. Fall back
-	# to the first affinity tag so the tile card picks up the casta's
-	# tint + pattern (DOMINI honeycomb gold, CLERUS fleur, etc.).
-	if class_id == "" and category == "start_tile" and c.class_affinity.size() > 0:
+	# Single-casta decks (travessia today, potentially others in the
+	# future) don't set `payload.class_id` — they live in their own
+	# deck and only declare their casta via top-level `class_affinity`.
+	# Fall back to the first affinity tag so the card picks up the
+	# casta's tint + pattern (DOMINI honeycomb gold, CLERUS fleur, etc.).
+	# Gated by category so multi-affinity decks (governanca, doutrina,
+	# economia) don't arbitrarily pick their first tag as color.
+	if class_id == "" and category == "travessia" and c.class_affinity.size() > 0:
 		class_id = String(c.class_affinity[0])
 	var tints: Dictionary = _CLASS_TINTS.get(class_id, {
 		"a": _CARD_DARK, "b": _CARD_DARK,
