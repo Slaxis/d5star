@@ -215,6 +215,8 @@ const _COIN_SEPARATION: int = 1
 var _image_plate: ColorRect
 var _type_label: Label
 var _stats_flow: HFlowContainer
+var _alignment_row: HFlowContainer   # morality + obedience chips, sits above _stats_flow
+var _payload_box: VBoxContainer      # vertical wrapper: alignment on top, stats below
 var _flavor_frame: Panel
 var _flavor_label: Label
 
@@ -347,14 +349,28 @@ func _build_ui() -> void:
 	_type_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_type_label)
 
-	# Stats badges — HFlowContainer wraps inline pills.
+	# Payload badges — VBox with alignment row on TOP (moral/obed
+	# shifts) and stats HFlow on BOTTOM. Reading order matches the
+	# ficha's payload summary: identity axes (moral/obed) frame the
+	# stat gains that describe what the character DOES.
+	_payload_box = VBoxContainer.new()
+	_payload_box.position = Vector2(10, 140)
+	_payload_box.size = Vector2(_SIZE.x - 20, 50)
+	_payload_box.add_theme_constant_override("separation", 3)
+	_payload_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_payload_box)
+
+	_alignment_row = HFlowContainer.new()
+	_alignment_row.add_theme_constant_override("h_separation", 6)
+	_alignment_row.add_theme_constant_override("v_separation", 2)
+	_alignment_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_payload_box.add_child(_alignment_row)
+
 	_stats_flow = HFlowContainer.new()
-	_stats_flow.position = Vector2(10, 140)
-	_stats_flow.size = Vector2(_SIZE.x - 20, 50)
 	_stats_flow.add_theme_constant_override("h_separation", 4)
 	_stats_flow.add_theme_constant_override("v_separation", 4)
 	_stats_flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_stats_flow)
+	_payload_box.add_child(_stats_flow)
 
 	# Flavor frame (moldura) — a RAISED panel sitting on the card
 	# surface (opposite of the inset image plate): light highlight
@@ -506,7 +522,13 @@ func _rebuild_stats(mods: Variant) -> void:
 # — refactor when another game module needs different icons.
 func _make_chip_strip(stat_id: String, value: int) -> Control:
 	var box := HBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# PASS lets the tooltip fire on hover while click events still
+	# bubble up to CardView (so the card stays clickable).
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
+	box.tooltip_text = "%s %s" % [
+		Alignment.sign_str(value),
+		String(Stats.NAMES_PT.get(stat_id, stat_id)),
+	]
 	box.add_theme_constant_override("separation", 2)
 	var is_negative: bool = value < 0
 	for i: int in absi(value):
@@ -519,10 +541,12 @@ func _make_chip_strip(stat_id: String, value: int) -> Control:
 	return box
 
 func _clear_stats() -> void:
-	if _stats_flow == null:
-		return
-	for child: Node in _stats_flow.get_children():
-		child.queue_free()
+	if _stats_flow != null:
+		for child: Node in _stats_flow.get_children():
+			child.queue_free()
+	if _alignment_row != null:
+		for child: Node in _alignment_row.get_children():
+			child.queue_free()
 
 # Alignment shift chips — one icon per magnitude, tinted green
 # (positive shift) or red (negative). Mirrors the ficha's morality
@@ -537,22 +561,32 @@ func _rebuild_alignment(payload: Variant) -> void:
 	var mor: int = Alignment.parse_shift(payload_dict.get("morality_shift", 0))
 	var obd: int = Alignment.parse_shift(payload_dict.get("obedience_shift", 0))
 	if mor != 0:
-		_stats_flow.add_child(_make_alignment_strip("morality", mor))
+		_alignment_row.add_child(_make_alignment_strip("morality", mor))
 	if obd != 0:
-		_stats_flow.add_child(_make_alignment_strip("obedience", obd))
+		_alignment_row.add_child(_make_alignment_strip("obedience", obd))
 
 # One HBox of `|value|` alignment icons for a single axis. Icon
 # name + color follow the ficha convention so both surfaces read
 # identically to the player.
 func _make_alignment_strip(axis: String, value: int) -> Control:
 	var box := HBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# PASS: tooltip fires but clicks still reach the card.
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
 	box.add_theme_constant_override("separation", 2)
 	var icon_name: String
+	var axis_label: String
+	var band_label: String
 	if axis == "morality":
 		icon_name = "heart" if value > 0 else "skull"
+		axis_label = "Moralidade"
+		band_label = Alignment.morality_label(value)
 	else:
 		icon_name = "circle" if value > 0 else "triangle"
+		axis_label = "Obediência"
+		band_label = Alignment.obedience_label(value)
+	box.tooltip_text = "%s %s (%s)" % [
+		axis_label, Alignment.sign_str(value), band_label,
+	]
 	var color: Color = _CHIP_GREEN if value > 0 else _CHIP_RED
 	for i: int in absi(value):
 		box.add_child(StatIcons.make_alignment_chip(icon_name, color, 1))
