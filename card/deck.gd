@@ -213,3 +213,23 @@ func filter_by_affinity(accepted: Array) -> Deck:
 	filtered.id = id
 	filtered.cards = pool
 	return filtered
+
+# Restricts the deck to cards whose `payload.morality_tier` sits in
+# [min_tier, max_tier]. Cards without the field are dropped — they
+# don't participate in a moral-gated draw. Used by Sugar Loaf's
+# Governança step, where the leader's current morality gates which
+# power-seizure options are on the table (a leader mor=+2 with ±1
+# tolerance sees only +1/+2 tier cards).
+func filter_by_morality_tier(min_tier: int, max_tier: int) -> Deck:
+	var pool: Array[Card] = []
+	for card: Card in cards:
+		var tier_v: Variant = card.payload.get("morality_tier", null)
+		if tier_v == null:
+			continue
+		var tier: int = int(tier_v)
+		if tier >= min_tier and tier <= max_tier:
+			pool.append(card)
+	var filtered := Deck.new()
+	filtered.id = id
+	filtered.cards = pool
+	return filtered

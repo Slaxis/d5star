@@ -71,6 +71,26 @@ static func draw_one_per_allied_class(group_id: String, n: int, accepted: Array,
 	hand.cards = deck.draw_one_per_class(n, rng)
 	return hand
 
+# Governança constructor: filter by casta affinity AND by moral
+# proximity to the leader. `accepted` = allowed castas (pyramid
+# affinity + EXSULES); `moral_center` = leader's morality total;
+# `moral_tolerance` = window around center (±1 point per Sugar Loaf
+# canon). Draws N random cards from the intersected pool. Each
+# governanca deck has 5 cards per casta × 6 castas × 5 morality
+# tiers — after both filters, a typical leader sees 8-18 candidates
+# and picks 3.
+static func draw_class_and_morality(group_id: String, n: int, accepted: Array,
+		moral_center: int, moral_tolerance: int,
+		rng: RandomNumberGenerator = null) -> Hand:
+	var hand := Hand.new()
+	hand.deck_id = group_id
+	var deck: Deck = Deck.from_group(group_id) \
+		.filter_by_edition(Deck.active_edition) \
+		.filter_by_affinity(accepted) \
+		.filter_by_morality_tier(moral_center - moral_tolerance, moral_center + moral_tolerance)
+	hand.cards = deck.draw(n, rng)
+	return hand
+
 # Commit the player's choice. Out-of-range indices are silent no-ops
 # (caller should validate input). Picking twice replaces the choice
 # — UI can therefore allow "I changed my mind" before confirming.
