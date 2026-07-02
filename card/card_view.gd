@@ -430,6 +430,7 @@ func _refresh() -> void:
 	_refresh_bg(card)
 	_refresh_flavor_frame()
 	_rebuild_stats(card.payload.get("stat_modifiers", {}))
+	_rebuild_alignment(card.payload)
 	_refresh_borders()
 
 # Derives the dominant Command Point family from the card's stat
@@ -522,6 +523,40 @@ func _clear_stats() -> void:
 		return
 	for child: Node in _stats_flow.get_children():
 		child.queue_free()
+
+# Alignment shift chips — one icon per magnitude, tinted green
+# (positive shift) or red (negative). Mirrors the ficha's morality
+# / obedience row (heart / skull for morality, circle / triangle
+# for obedience). Rendered INSIDE `_stats_flow` right after the
+# stat chips so the whole payload effect reads as one inline row.
+# Zero shifts are skipped to keep the flow compact.
+func _rebuild_alignment(payload: Variant) -> void:
+	if not payload is Dictionary:
+		return
+	var payload_dict: Dictionary = payload
+	var mor: int = Alignment.parse_shift(payload_dict.get("morality_shift", 0))
+	var obd: int = Alignment.parse_shift(payload_dict.get("obedience_shift", 0))
+	if mor != 0:
+		_stats_flow.add_child(_make_alignment_strip("morality", mor))
+	if obd != 0:
+		_stats_flow.add_child(_make_alignment_strip("obedience", obd))
+
+# One HBox of `|value|` alignment icons for a single axis. Icon
+# name + color follow the ficha convention so both surfaces read
+# identically to the player.
+func _make_alignment_strip(axis: String, value: int) -> Control:
+	var box := HBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override("separation", 2)
+	var icon_name: String
+	if axis == "morality":
+		icon_name = "heart" if value > 0 else "skull"
+	else:
+		icon_name = "circle" if value > 0 else "triangle"
+	var color: Color = _CHIP_GREEN if value > 0 else _CHIP_RED
+	for i: int in absi(value):
+		box.add_child(StatIcons.make_alignment_chip(icon_name, color, 1))
+	return box
 
 # Build N small Ω coins inside the cost HBox. Each coin is a tiny
 # circular Panel (StyleBoxFlat with corner_radius = _COIN_SIZE / 2)
