@@ -252,3 +252,30 @@ func filter_by_obedience_tier(min_tier: int, max_tier: int) -> Deck:
 	filtered.id = id
 	filtered.cards = pool
 	return filtered
+
+# Restricts the deck to cards whose `payload.biome_affinity` includes
+# `biome_id`. Cards with an EMPTY biome_affinity are treated as
+# UNIVERSAL — they pass any biome filter, letting cards like TRADE
+# or TRIBUTE appear regardless of the leader's starting tile.
+# Used by Sugar Loaf's Economia step: the travessia pick's
+# `biome_id` gates which sustenance models are on the table (a
+# coastal leader sees PESCA/SALINAS; a mountain leader sees
+# MINERAÇÃO/CAÇA).
+func filter_by_biome(biome_id: String) -> Deck:
+	var pool: Array[Card] = []
+	for card: Card in cards:
+		var biomes_v: Variant = card.payload.get("biome_affinity", [])
+		if not biomes_v is Array:
+			continue
+		var biomes: Array = biomes_v
+		if biomes.is_empty():
+			pool.append(card)
+			continue
+		for tag_v: Variant in biomes:
+			if String(tag_v) == biome_id:
+				pool.append(card)
+				break
+	var filtered := Deck.new()
+	filtered.id = id
+	filtered.cards = pool
+	return filtered

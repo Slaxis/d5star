@@ -108,6 +108,22 @@ static func draw_by_obedience(group_id: String, n: int,
 	hand.cards = deck.draw(n, rng)
 	return hand
 
+# Economia constructor: filter by the leader's town-center biome
+# (set by the travessia pick). Cards with an EMPTY biome_affinity
+# are universal and always pass — used for COMÉRCIO/TRIBUTO/PILHAGEM
+# style options that make sense anywhere. A coastal leader sees
+# PESCA/PIRATARIA/SALINAS + universals; a mountain leader sees
+# MINERAÇÃO/CAÇA/CATA-SUCATA + universals.
+static func draw_by_biome(group_id: String, n: int, biome_id: String,
+		rng: RandomNumberGenerator = null) -> Hand:
+	var hand := Hand.new()
+	hand.deck_id = group_id
+	var deck: Deck = Deck.from_group(group_id) \
+		.filter_by_edition(Deck.active_edition) \
+		.filter_by_biome(biome_id)
+	hand.cards = deck.draw(n, rng)
+	return hand
+
 # Commit the player's choice. Out-of-range indices are silent no-ops
 # (caller should validate input). Picking twice replaces the choice
 # — UI can therefore allow "I changed my mind" before confirming.
