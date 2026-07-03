@@ -91,6 +91,23 @@ static func draw_class_and_morality(group_id: String, n: int, accepted: Array,
 	hand.cards = deck.draw(n, rng)
 	return hand
 
+# Doutrina constructor: filter by obedience proximity to the leader
+# WITHOUT a casta filter. Doctrines are universal ideological
+# choices — any casta can pick any doctrine, provided it's within
+# tolerance of the leader's current obedience position. An anarchist
+# leader (obed=-2) with ±1 sees only -2/-1 tier doctrines; a
+# hive-mind leader (obed=+2) sees only +1/+2.
+static func draw_by_obedience(group_id: String, n: int,
+		obed_center: int, obed_tolerance: int,
+		rng: RandomNumberGenerator = null) -> Hand:
+	var hand := Hand.new()
+	hand.deck_id = group_id
+	var deck: Deck = Deck.from_group(group_id) \
+		.filter_by_edition(Deck.active_edition) \
+		.filter_by_obedience_tier(obed_center - obed_tolerance, obed_center + obed_tolerance)
+	hand.cards = deck.draw(n, rng)
+	return hand
+
 # Commit the player's choice. Out-of-range indices are silent no-ops
 # (caller should validate input). Picking twice replaces the choice
 # — UI can therefore allow "I changed my mind" before confirming.

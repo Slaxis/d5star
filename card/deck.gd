@@ -233,3 +233,22 @@ func filter_by_morality_tier(min_tier: int, max_tier: int) -> Deck:
 	filtered.id = id
 	filtered.cards = pool
 	return filtered
+
+# Same as morality_tier but along the OBEDIENCE axis. Used by
+# Sugar Loaf's Doutrina step: doctrines are universal (any casta
+# can pick any doctrine) but gated by the leader's obedience
+# position, so an anarchist (obed=-2) with ±1 tolerance only sees
+# -2/-1 tier doctrines — never lawful/hive-mind ones.
+func filter_by_obedience_tier(min_tier: int, max_tier: int) -> Deck:
+	var pool: Array[Card] = []
+	for card: Card in cards:
+		var tier_v: Variant = card.payload.get("obedience_tier", null)
+		if tier_v == null:
+			continue
+		var tier: int = int(tier_v)
+		if tier >= min_tier and tier <= max_tier:
+			pool.append(card)
+	var filtered := Deck.new()
+	filtered.id = id
+	filtered.cards = pool
+	return filtered
