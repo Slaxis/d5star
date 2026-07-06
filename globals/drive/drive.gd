@@ -290,9 +290,17 @@ func script(class_name_str: String) -> Script:
 		return null
 	return rm.load_resource(path) as Script
 
-# Thing-script lookup by short id (e.g. "card", "creature"). Special
-# case "thing"/"thing_part" resolve to the engine base. Other ids
-# resolve via AssetManager scanning `things_path()`.
+# Thing-script lookup by short id (e.g. "card", "creature", "faction").
+# Resolution order:
+#   1. "thing" / "thing_part" — engine base scripts (hardcoded path)
+#   2. AssetManager scan of `things_asset_root` — for engine-owned
+#      Thing scripts under `things_path()`
+#   3. Project class registry by filename — enables the "filename ==
+#      thing id → auto-bind" convention for game/module-layer scripts
+#      that live outside the engine's scan (e.g. `game/defs/faction.gd`
+#      binding to id "faction"). Any registered class_name whose file
+#      basename matches the id is a candidate; validators enforce that
+#      the script actually extends Thing/ThingPart.
 func script_by_id(id: String, things_asset_root: String = "") -> Script:
 	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
 	var am: AssetManager = _m(AssetManager.ID) as AssetManager
@@ -315,9 +323,13 @@ func script_by_id(id: String, things_asset_root: String = "") -> Script:
 	if asset == null and things_asset_root != "":
 		am.list(things_asset_root)
 		asset = am.lookup(key)
-	if asset == null:
+	if asset != null:
+		return rm.load_resource(asset.path) as Script
+	# Fallback: project class registry, filename convention.
+	var by_filename: String = rm.resolve_class_by_filename(key)
+	if by_filename == "":
 		return null
-	return rm.load_resource(asset.path) as Script
+	return rm.load_resource(by_filename) as Script
 
 func json(asset_id: String) -> Dictionary:
 	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager

@@ -86,6 +86,27 @@ func resolve_class(class_name_str: String) -> String:
 	_class_paths[key] = ""
 	return ""
 
+# filename basename → file path via the same project class registry.
+# Powers the "script filename == thing id → auto-bind" convention:
+# `Drive.script_by_id("faction")` can find `game/defs/faction.gd`
+# even though it's outside the engine's `things_path()` scan.
+# Cached under a distinct key prefix to avoid collision with
+# resolve_class's class_name cache.
+func resolve_class_by_filename(basename: String) -> String:
+	var key: String = String(basename).strip_edges().to_lower()
+	if key == "":
+		return ""
+	var cache_key: String = "@filename:" + key
+	if _class_paths.has(cache_key):
+		return _class_paths[cache_key]
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		var path: String = String(entry.get("path", ""))
+		if path.get_file().get_basename().to_lower() == key:
+			_class_paths[cache_key] = path
+			return path
+	_class_paths[cache_key] = ""
+	return ""
+
 # Clears the resource cache. Class path cache is preserved because
 # `class_name` declarations don't shift between modules — they're
 # baked into ProjectSettings at editor time. Called by Drive on

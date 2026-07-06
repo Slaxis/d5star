@@ -72,8 +72,14 @@ func _has_script(script_id: String) -> bool:
 	return _script(script_id) != null
 
 # Resolves which Script the instance should `script.new()` from.
-# Order: explicit ancestor script → inherited from parent → base
-# script for the kind ("thing" or "part_base").
+# Order: explicit ancestor script → inherited from parent → self-id
+# auto-bind convention → base script for the kind.
+#
+# Self-id auto-bind: if a script exists with filename matching
+# `base.type_id` (via Drive's class registry lookup), instantiate
+# via that class. Enables the RimWorld/Qud-style "one script per
+# thing kind" pattern — a Thing with `"id": "faction"` binds to
+# `class_name Faction extends Thing` in `faction.gd`.
 func _resolve_script_id(base: ThingType, parent: ThingType) -> String:
 	if base == null:
 		return ""
@@ -81,6 +87,8 @@ func _resolve_script_id(base: ThingType, parent: ThingType) -> String:
 		return base.ancestor
 	if parent != null and parent.script_id != "":
 		return parent.script_id
+	if _has_script(base.type_id):
+		return base.type_id
 	# Fallback to the kind-specific base script.
 	var base_name: String = "thing_part" if base.kind == KIND_PART else "thing"
 	if _has_script(base_name):
@@ -120,9 +128,6 @@ func _parse_type(raw: Dictionary) -> ThingType:
 func _get_type(type_id: String) -> ThingType:
 	var key: String = String(type_id).strip_edges().to_lower()
 	if key == "":
-		return null
-	if _has_script(key):
-		Log.log(self, "error", "ThingCatalog: type id conflicts with script id: " + key)
 		return null
 	if _types.has(key):
 		return _types[key]
@@ -201,8 +206,6 @@ func _build_index() -> void:
 		var id: String = String(raw.get(KEY_ID, "")).strip_edges().to_lower()
 		if id == "":
 			continue
-		if _has_script(id):
-			continue
 		if not _index.has(group):
 			_index[group] = []
 		_index[group].append(id)
@@ -235,9 +238,6 @@ func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 	raw[KEY_ID] = type_id
 	if raw.has(KEY_ANCESTOR):
 		raw[KEY_ANCESTOR] = String(raw.get(KEY_ANCESTOR, "")).strip_edges().to_lower()
-	if _has_script(type_id):
-		Log.log(self, "error", "ThingCatalog: type id conflicts with script id: " + type_id)
-		return null
 	if _runtime_specs.has(type_id):
 		if not replace:
 			return _resolved.get(type_id, null) as ThingType
