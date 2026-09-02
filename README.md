@@ -118,4 +118,10 @@ ajuste o número de `get_base_dir()`:
 | `globals/drive/drive.gd` | `<raiz>/globals/drive/` | raiz da engine |
 | `d5star_plugin.gd` | `<raiz>/` | raiz do addon |
 
+Uma exceção: `game/game.tscn` referencia seu script por `uid://` (autoritativo,
+viaja com o addon) e, como fallback textual, pelo caminho canônico
+`res://addons/d5star/`. Cenas não computam caminhos — por isso a lib precisa
+ficar exatamente em `res://addons/d5star/`, que é também o que o `plugin.cfg`
+exige.
+
 Todo o resto dos caminhos internos vem do `engine.json`.
