@@ -1,17 +1,8 @@
 {
-  "game_root": "game",
-  "modules": "modules",
-  "defs": "defs",
-  "user_modules": "user://modules",
-  "module_manifest": "module.json",
-  "content": "content",
-  "system": "system",
-  "game_config": "game",
   "parsers": "globals/drive/parser/parsers",
   "loaders": "globals/drive/loader/loaders",
   "validators": "globals/drive/validator/validators",
   "things": "thing/things",
   "thing_base": "thing/data/thing.gd",
-  "thing_part_base": "thing/data/thing_part.gd",
-  "scene_dir": "scene"
+  "thing_part_base": "thing/data/thing_part.gd"
 }

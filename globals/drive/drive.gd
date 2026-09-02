@@ -7,6 +7,7 @@
 extends Node
 
 const ENGINE_CONFIG_NAME := "engine.json"
+const PROJECT_CONFIG := "res://d5star.json"
 
 signal active_module_changed(module_id: String)
 
@@ -74,6 +75,11 @@ func _engine_root() -> String:
 func _load_engine_config() -> Dictionary:
 	var root: String = _engine_root()
 	var config: Dictionary = _bootstrap_json(root + "/" + ENGINE_CONFIG_NAME)
+	# Project-level layout lives in the game, never inside the library —
+	# otherwise every game would have to edit a file inside the submodule.
+	# Optional: PathManager, ModuleManager and DefManager all have defaults.
+	if FileAccess.file_exists(PROJECT_CONFIG):
+		config.merge(_bootstrap_json(PROJECT_CONFIG), true)
 	# Self-location always wins over a stale value in the JSON. PathManager
 	# re-prefixes "res://", so store the path without it.
 	config["engine_root"] = root.trim_prefix("res://")
