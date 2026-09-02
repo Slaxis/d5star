@@ -200,7 +200,7 @@ const _CP_COLORS: Dictionary = {
 	"pistis": Color("#7B4FA8"),
 }
 
-const _TEXTURE_SHADER: Shader = preload("res://engine/d5star/card/card_texture.gdshader")
+const _TEXTURE_SHADER: Shader = preload("card_texture.gdshader")
 
 var _hover: bool = false
 

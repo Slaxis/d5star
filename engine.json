@@ -1,6 +1,5 @@
 {
   "game_root": "game",
-  "engine_root": "engine/d5star",
   "modules": "modules",
   "defs": "defs",
   "user_modules": "user://modules",

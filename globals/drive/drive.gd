@@ -6,7 +6,7 @@
 # read the engine config before ResourceManager exists.
 extends Node
 
-const ENGINE_CONFIG := "res://engine/d5star/engine.json"
+const ENGINE_CONFIG_NAME := "engine.json"
 
 signal active_module_changed(module_id: String)
 
@@ -64,8 +64,20 @@ func _m(id: String) -> D5Manager:
 
 # --- Boot ---
 
+# The engine root is derived from this script's own location, never
+# hardcoded — the library must work from whatever folder it was dropped
+# into (res://addons/d5star, res://engine/d5star, ...). drive.gd lives
+# at <engine_root>/globals/drive/, hence three get_base_dir() hops.
+func _engine_root() -> String:
+	return get_script().resource_path.get_base_dir().get_base_dir().get_base_dir()
+
 func _load_engine_config() -> Dictionary:
-	return _bootstrap_json(ENGINE_CONFIG)
+	var root: String = _engine_root()
+	var config: Dictionary = _bootstrap_json(root + "/" + ENGINE_CONFIG_NAME)
+	# Self-location always wins over a stale value in the JSON. PathManager
+	# re-prefixes "res://", so store the path without it.
+	config["engine_root"] = root.trim_prefix("res://")
+	return config
 
 func _get_resource(resource_id: String) -> Resource:
 	var pr := _m(ParserManager.ID) as ParserManager
