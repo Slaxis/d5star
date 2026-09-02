@@ -14,7 +14,7 @@ func _ready() -> void:
 		_boot_error("Failed to activate module: " + modules[0].id)
 		return
 	The.load_rules()
-	var the_rules: Rules = The.rules
+	var the_rules: Codex = The.rules
 	if the_rules == null or not the_rules.is_valid():
 		_boot_error("Invalid rules — check content/system/game.json in module '" + modules[0].id + "'.")
 		return

@@ -1,5 +1,5 @@
 # DefManager: discovers, loads, and manages game definitions (Def subclasses).
-extends Manager
+extends D5Manager
 class_name DefManager
 
 const ID := "defs"

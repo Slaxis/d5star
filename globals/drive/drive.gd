@@ -1,6 +1,6 @@
 # Service locator for parsers, loaders, assets, path resolution,
 # module management, defs. Routes every typed resource lookup
-# through the appropriate Manager — game/engine code never touches
+# through the appropriate D5Manager — game/engine code never touches
 # `load()`, `ResourceLoader`, `FileAccess`, or `ProjectSettings`
 # directly. The only escape is `_bootstrap_json` below, used to
 # read the engine config before ResourceManager exists.
@@ -10,7 +10,7 @@ const ENGINE_CONFIG := "res://engine/d5star/engine.json"
 
 signal active_module_changed(module_id: String)
 
-var _managers: Dictionary = {}  # manager_id -> Manager
+var _managers: Dictionary = {}  # manager_id -> D5Manager
 var _module_id: String = ""
 
 # --- Bootstrap (only for engine config — ResourceManager isn't alive yet) ---
@@ -54,12 +54,12 @@ func _scan_files(root: String, ext: String, results: Array[String]) -> void:
 			results.append(entry_path)
 	dir.list_dir_end()
 
-# --- Manager registry ---
+# --- D5Manager registry ---
 
-func _register(mgr: Manager) -> void:
+func _register(mgr: D5Manager) -> void:
 	_managers[mgr.manager_id()] = mgr
 
-func _m(id: String) -> Manager:
+func _m(id: String) -> D5Manager:
 	return _managers.get(id, null)
 
 # --- Boot ---
@@ -189,8 +189,8 @@ func lookup(asset_id: String) -> Asset:
 
 # --- Resource API (Parser-driven typed Resources) ---
 
-func rules() -> Rules:
-	return _get_resource("rules") as Rules
+func rules() -> Codex:
+	return _get_resource("rules") as Codex
 
 func directories() -> Directories:
 	return _get_resource("directories") as Directories

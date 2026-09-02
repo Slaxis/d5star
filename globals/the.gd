@@ -2,7 +2,7 @@
 # Layer: The -> God -> Drive.
 extends Node
 
-var rules: Rules = null
+var rules: Codex = null
 var scenes: Dictionary = {}
 var session: Dictionary = {}
 

@@ -1,17 +1,17 @@
-# Selection — typed snapshot of player choices or system state that
+# Slate — typed snapshot of player choices or system state that
 # lives between systems (UI → UI handoff, UI → engine handoff, Memento
 # save fields). It's the third tier alongside Def and Thing:
 #
 #   Def        (Resource) — catalogue / schema loaded from JSON.
 #                            "What types exist in the game."
-#   Selection  (RefCounted) — typed choice or computed snapshot, lives
+#   Slate  (RefCounted) — typed choice or computed snapshot, lives
 #                            in The.session and is passed between
 #                            systems. "What was chosen / computed."
 #   Thing      (Node)      — live game object in the SceneTree,
 #                            receives Cmds via Air, has parts. "A
 #                            piece of the game world."
 #
-# When to use Selection:
+# When to use Slate:
 #   • Maleta UI builds it, Board reads it
 #   • Worldgen accepts Laser / MapSize Selections
 #   • Save game stores typed snapshots instead of raw Dictionaries
@@ -22,13 +22,13 @@
 #
 # See docs/D5STAR.md §3-tier data architecture for the full picture.
 extends RefCounted
-class_name Selection
+class_name Slate
 
-# Optional reference to the Def that schemas this Selection. Subclasses
+# Optional reference to the Def that schemas this Slate. Subclasses
 # may ignore it when the snapshot is standalone (no underlying Def).
 var _def: Def = null
 
-# Returns the underlying Def, or null when the Selection is standalone.
+# Returns the underlying Def, or null when the Slate is standalone.
 func def() -> Def:
 	return _def
 
@@ -50,9 +50,9 @@ func text(key_or_dict: Variant, default_value: String = "") -> String:
 func to_session() -> Dictionary:
 	return {}
 
-# Memento restore hook. Override to rebuild the Selection's typed
+# Memento restore hook. Override to rebuild the Slate's typed
 # fields from a Dictionary previously produced by to_session(). The
-# Def reference is restored by the system that loads the Selection
+# Def reference is restored by the system that loads the Slate
 # (typically the UI or the system that owns it).
 func from_session(_state: Dictionary) -> void:
 	pass

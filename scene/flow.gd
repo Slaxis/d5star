@@ -99,7 +99,7 @@ func _validate_consumes(step: Dictionary) -> bool:
 		var key_str: String = String(key)
 		if not The.session.has(key_str):
 			Log.log(self, "error",
-				"Flow: step '%s' requires Selection '%s' which is not in session."
+				"Flow: step '%s' requires Slate '%s' which is not in session."
 				% [step.get("id", "?"), key_str])
 			return false
 	return true

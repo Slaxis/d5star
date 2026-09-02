@@ -1,9 +1,9 @@
-# Manager: base class for all Drive managers.
+# D5Manager: base class for all Drive managers.
 extends Resource
-class_name Manager
+class_name D5Manager
 
 func manager_id() -> String:
-	push_error("Manager.manager_id() not overridden in " + get_script().resource_path)
+	push_error("D5Manager.manager_id() not overridden in " + get_script().resource_path)
 	return ""
 
 func _key(id: String) -> String:

@@ -1,5 +1,5 @@
 # PathManager: resolves all filesystem paths for the engine.
-extends Manager
+extends D5Manager
 class_name PathManager
 
 const ID := "paths"

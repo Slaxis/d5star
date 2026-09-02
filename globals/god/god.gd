@@ -2,7 +2,7 @@
 # three Hubs:
 #
 #   God.things  — ThingHub: Thing system (catalog, lifecycle, content)
-#   God.rules   — RuleHub:  active Rules resource + future rule queries
+#   God.rules   — RuleHub:  active Codex resource + future rule queries
 #   God.media   — MediaHub: typed media facade (texture/shader/sound/scene/script/json)
 #
 # Game code calls God.<hub>.<method>; God itself holds zero domain

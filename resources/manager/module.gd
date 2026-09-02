@@ -1,6 +1,6 @@
 # ModuleManager: discovers native and user modules, resolves content roots
 # and dependency load order.
-extends Manager
+extends D5Manager
 class_name ModuleManager
 
 const ID := "modules"

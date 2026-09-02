@@ -1,12 +1,12 @@
-# Hand — the typed Selection that holds a draw of cards and the pick.
+# Hand — the typed Slate that holds a draw of cards and the pick.
 #
 # A Hand is the player's offered choice: N cards drawn from a Deck,
 # plus a single `picked` card once the player commits. It extends
-# Selection so the entire draw + pick state round-trips through
+# Slate so the entire draw + pick state round-trips through
 # `to_session()` / `from_session()` — letting a save reload mid-draw
 # without the player losing their offered cards.
 class_name Hand
-extends Selection
+extends Slate
 
 var deck_id: String = ""
 var cards: Array[Card] = []

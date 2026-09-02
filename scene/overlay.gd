@@ -36,10 +36,10 @@ func close() -> void:
 		Lifetime.ONE_SHOT:
 			queue_free()
 
-func read(key: String) -> Selection:
-	return The.session.get(key, null) as Selection
+func read(key: String) -> Slate:
+	return The.session.get(key, null) as Slate
 
-func write(key: String, sel: Selection) -> void:
+func write(key: String, sel: Slate) -> void:
 	The.session[key] = sel
 
 # Subclass hooks — default no-ops.

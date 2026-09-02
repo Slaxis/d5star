@@ -1,5 +1,5 @@
 # Parser manager: registers parser scripts and caches parsed resources.
-extends Manager
+extends D5Manager
 class_name ParserManager
 
 const ID := "parsers"

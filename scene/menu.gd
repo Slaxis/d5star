@@ -11,10 +11,10 @@ var scene_flow: SceneFlow = SceneFlow.new()
 func go(transition_name: String) -> void:
 	transition_requested.emit(transition_name)
 
-func read(key: String) -> Selection:
+func read(key: String) -> Slate:
 	return scene_flow.read(key)
 
-func write(key: String, sel: Selection) -> void:
+func write(key: String, sel: Slate) -> void:
 	scene_flow.write(key, sel)
 
 # Lifecycle hooks — Flow calls these around scene swaps. Default no-op.

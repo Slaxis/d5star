@@ -1,6 +1,6 @@
 # Game rules parsed from game.json.
 extends Resource
-class_name Rules
+class_name Codex
 
 var id: String = ""
 var name: String = ""

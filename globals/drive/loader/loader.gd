@@ -9,7 +9,7 @@
 # claim the path's extension.
 #
 # Adding a new type = drop a new subclass here, declare its
-# extensions, return the typed resource. Zero touch on the Manager.
+# extensions, return the typed resource. Zero touch on the D5Manager.
 class_name Loader
 extends RefCounted
 

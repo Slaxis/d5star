@@ -14,7 +14,7 @@
 # registry is conceptually a registry, not a load, but it lives
 # here because everything it produces (paths to Scripts) flows
 # into `load_resource` anyway.
-extends Manager
+extends D5Manager
 class_name ResourceManager
 
 const ID := "resources"

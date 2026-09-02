@@ -1,5 +1,5 @@
 # Asset manager: scans folders for .gd/.tscn assets and caches by id.
-extends Manager
+extends D5Manager
 class_name AssetManager
 
 const ID := "assets"

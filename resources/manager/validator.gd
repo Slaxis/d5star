@@ -7,7 +7,7 @@
 # aggregates their issue messages into one array. The caller
 # (Drive.validate_content → ThingHub.on_module_changed) decides how
 # to report — the MVP logs warnings.
-extends Manager
+extends D5Manager
 class_name ValidatorManager
 
 const ID := "validators"

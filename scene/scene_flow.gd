@@ -20,11 +20,11 @@ func transitions() -> Dictionary:
 	return flow_step.get("transitions", {})
 
 # --- Session helpers ---
-# Typed read/write against The.session. Selection is the engine's
+# Typed read/write against The.session. Slate is the engine's
 # cargo type — see docs/D5STAR.md §5.
 
-func read(key: String) -> Selection:
-	return The.session.get(key, null) as Selection
+func read(key: String) -> Slate:
+	return The.session.get(key, null) as Slate
 
-func write(key: String, sel: Selection) -> void:
+func write(key: String, sel: Slate) -> void:
 	The.session[key] = sel
