@@ -20,11 +20,11 @@ func transitions() -> Dictionary:
 	return flow_step.get("transitions", {})
 
 # --- Session helpers ---
-# Typed read/write against The.session. Slate is the engine's
+# Typed read/write against The.session. Snapshot is the engine's
 # cargo type — see docs/D5STAR.md §5.
 
-func read(key: String) -> Slate:
-	return The.session.get(key, null) as Slate
+func read(key: String) -> Snapshot:
+	return The.session.get(key, null) as Snapshot
 
-func write(key: String, sel: Slate) -> void:
+func write(key: String, sel: Snapshot) -> void:
 	The.session[key] = sel

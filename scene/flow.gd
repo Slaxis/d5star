@@ -1,7 +1,7 @@
 # Flow runtime — drives the player through a sequence of Scenes.
 # Loads the JSON declaration (a FlowDef Thing), instantiates each
 # step's scene_file via God.media.scene(), validates that the required
-# Selections exist in The.session before entering, and routes
+# Snapshots exist in The.session before entering, and routes
 # `transition_requested` signals against the step's transitions map.
 #
 # Reserved transition targets:
@@ -99,7 +99,7 @@ func _validate_consumes(step: Dictionary) -> bool:
 		var key_str: String = String(key)
 		if not The.session.has(key_str):
 			Log.log(self, "error",
-				"Flow: step '%s' requires Slate '%s' which is not in session."
+				"Flow: step '%s' requires Snapshot '%s' which is not in session."
 				% [step.get("id", "?"), key_str])
 			return false
 	return true
