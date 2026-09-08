@@ -1,10 +1,12 @@
-# Game session: UI cache, runtime state, and scene transitions.
+# The — the Blackboard. A shared, typed key/value store that flows between
+# scenes: screens write Records to it, later screens and systems read them, and
+# the Flow gates its own transitions on which keys are present.
 # Layer: The -> God -> Drive.
 extends Node
 
 var rules: Codex = null
 var scenes: Dictionary = {}
-var session: Dictionary = {}
+var board: Dictionary = {}
 
 func _ready() -> void:
 	pass
@@ -41,7 +43,7 @@ func _snapshot_data(node: Node) -> Dictionary:
 
 func snapshot() -> Dictionary:
 	var save: Dictionary = {}
-	save["session"] = session.duplicate(true)
+	save["board"] = board.duplicate(true)
 	var entities: Array = []
 	var tree: SceneTree = get_tree()
 	if tree != null:
@@ -61,9 +63,9 @@ func snapshot() -> Dictionary:
 func restore(save: Dictionary) -> void:
 	if save.is_empty():
 		return
-	var saved_session: Variant = save.get("session", null)
-	if saved_session is Dictionary:
-		session = (saved_session as Dictionary).duplicate(true)
+	var saved_board: Variant = save.get("board", null)
+	if saved_board is Dictionary:
+		board = (saved_board as Dictionary).duplicate(true)
 	var entities: Variant = save.get("entities", null)
 	if not entities is Array:
 		return

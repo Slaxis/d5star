@@ -1,12 +1,12 @@
-# Hand — the typed Snapshot that holds a draw of cards and the pick.
+# Hand — the typed Record that holds a draw of cards and the pick.
 #
 # A Hand is the player's offered choice: N cards drawn from a Deck,
 # plus a single `picked` card once the player commits. It extends
-# Snapshot so the entire draw + pick state round-trips through
-# `to_session()` / `from_session()` — letting a save reload mid-draw
+# Record so the entire draw + pick state round-trips through
+# `to_snapshot()` / `from_snapshot()` — letting a save reload mid-draw
 # without the player losing their offered cards.
 class_name Hand
-extends Snapshot
+extends Record
 
 var deck_id: String = ""
 var cards: Array[Card] = []
@@ -143,7 +143,7 @@ func size() -> int:
 # re-querying the deck on restore. This keeps the snapshot small
 # and lets card definitions evolve between save/load.
 
-func to_session() -> Dictionary:
+func to_snapshot() -> Dictionary:
 	var ids: Array = []
 	for c: Card in cards:
 		ids.append(c.id)
@@ -153,7 +153,7 @@ func to_session() -> Dictionary:
 		"picked":   picked.id if picked != null else "",
 	}
 
-func from_session(state: Dictionary) -> void:
+func from_snapshot(state: Dictionary) -> void:
 	deck_id = String(state.get("deck_id", ""))
 	cards.clear()
 	picked = null

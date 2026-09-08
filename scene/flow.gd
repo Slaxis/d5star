@@ -1,7 +1,7 @@
 # Flow runtime — drives the player through a sequence of Scenes.
 # Loads the JSON declaration (a FlowDef Thing), instantiates each
 # step's scene_file via God.media.scene(), validates that the required
-# Snapshots exist in The.session before entering, and routes
+# Snapshots exist in The.board before entering, and routes
 # `transition_requested` signals against the step's transitions map.
 #
 # Reserved transition targets:
@@ -51,7 +51,7 @@ func _goto(step_id: String) -> void:
 
 	if _current_scene_instance != null and is_instance_valid(_current_scene_instance):
 		if _current_scene_instance.has_method("_on_exit"):
-			_current_scene_instance.call("_on_exit", The.session)
+			_current_scene_instance.call("_on_exit", The.board)
 		if _current_scene_instance.has_signal("transition_requested"):
 			var sig: Signal = _current_scene_instance.transition_requested
 			if sig.is_connected(_on_transition_requested):
@@ -87,7 +87,7 @@ func _goto(step_id: String) -> void:
 		_current_scene_instance.transition_requested.connect(_on_transition_requested)
 
 	if _current_scene_instance.has_method("_on_enter"):
-		_current_scene_instance.call("_on_enter", The.session)
+		_current_scene_instance.call("_on_enter", The.board)
 
 	_transitioning = false
 
@@ -97,9 +97,9 @@ func _validate_consumes(step: Dictionary) -> bool:
 		return true
 	for key: Variant in (needs as Array):
 		var key_str: String = String(key)
-		if not The.session.has(key_str):
+		if not The.board.has(key_str):
 			Log.log(self, "error",
-				"Flow: step '%s' requires Snapshot '%s' which is not in session."
+				"Flow: step '%s' requires Record '%s' which is not on the board."
 				% [step.get("id", "?"), key_str])
 			return false
 	return true

@@ -137,7 +137,7 @@ func filter_by_max_cost(max_cost: int) -> Deck:
 	return filtered
 
 # Lookup a single card by id — useful for restoring a Hand from
-# session state (`from_session`).
+# session state (`from_snapshot`).
 func find(card_id: String) -> Card:
 	for c: Card in cards:
 		if c.id == card_id:

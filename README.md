@@ -90,7 +90,7 @@ Loader              MediaHub       Menu              ModuleInfo
 ModuleManager       Overlay        Parser            ParserManager
 PartsValidator      PathManager    ResourceManager   RuleHub
 RulesParser         SceneFlow      SceneLoader       ScriptBindingValidator
-ScriptLoader        SeedRng        ShaderLoader      Snapshot
+ScriptLoader        SeedRng        ShaderLoader      Record
 SoundLoader         TextureLoader  Thing             ThingAssembler
 ThingCatalog        ThingData      ThingHub          ThingPart
 ThingStateMachine   ThingType      ThingVariant      Validator
@@ -103,7 +103,7 @@ demais para uma lib compartilhada:
 | Era | Virou | Motivo |
 |---|---|---|
 | `Manager` | `D5Manager` | "manager" é substantivo central de jogos de gestão |
-| `Selection` | `Snapshot` | libera escalação / seleção. Passou por `Slate` na v0.1.0; renomeado na v0.2.0 porque "Slate" era evocativo mas não descrevia o padrão — a classe é um Memento tipado, e "snapshot" é a palavra que a própria classe usa pra se descrever |
+| `Selection` | `Record` | libera escalação / seleção. Passou por `Slate` na v0.1.0; renomeado na v0.2.0 porque "Slate" era evocativo mas não descrevia o padrão — a classe é um Memento tipado, e "snapshot" é a palavra que a própria classe usa pra se descrever |
 | `Rules` | `Codex` | libera regras de liga |
 
 ---
