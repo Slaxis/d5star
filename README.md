@@ -4,6 +4,18 @@ Biblioteca data-driven de criação de jogos em Godot 4.7. Tudo que o jogo
 define vive em JSON; o código da engine é genérico e nunca sabe o nome de
 nada específico de um jogo.
 
+O nome vem do dado: o **d5\***, que mostra 0..5 e **explode nos dois
+sentidos** — tirou 5, rola de novo e soma; tirou 0, rola de novo e subtrai.
+Média 2,5, e as explosões se cancelam exatamente, então o dado é simétrico:
+foge para cima com a mesma facilidade que foge para baixo. É o que permite ao
+azarão vencer sem que ninguém tenha inclinado a régua a favor dele.
+
+```gdscript
+D5.roll(rng)                    # um d5*
+D5.check(base, rng)             # base + 2d5*
+D5.contest(ataque, defesa, rng) # margem: > 0 significa que o ataque venceu
+```
+
 Consumida como **git submodule** em `res://addons/d5star/`.
 
 ---
