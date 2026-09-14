@@ -36,15 +36,16 @@ func _ready() -> void:
 	# "$exit" ends the flow, and the boot layer is what decides what that
 	# means. Game IS the boot scene and starts exactly one flow, so there is no
 	# parent scope to hand control back to: a finished flow is a finished
-	# application. Nobody was connected here, so `flow_finished` reached no one
-	# and a Quit button wired to "$exit" did nothing at all.
-	_flow.flow_finished.connect(_on_flow_finished)
+	# application.
+	#
+	# DECLARED, not listened for. Connecting to `flow_finished` here looks
+	# right and does nothing: the line below hands the tree a new scene on the
+	# first transition, which frees Game, and a signal whose target has been
+	# freed reaches nobody. Flow is the node built to survive that, so Flow is
+	# the one that carries the policy out.
+	_flow.quit_on_finish = true
 	get_tree().root.add_child.call_deferred(_flow)
 	_flow.start.call_deferred(flow_data)
-
-func _on_flow_finished() -> void:
-	Log.log(self, "info", "Flow finished — quitting.")
-	get_tree().quit()
 
 # R8 — show a visible error screen instead of a blank window on boot failure.
 func _boot_error(message: String) -> void:

@@ -5,9 +5,11 @@
 # `transition_requested` signals against the step's transitions map.
 #
 # Reserved transition targets:
-#  "$exit" — end the flow (emits `flow_finished`); the boot layer
-#            decides whether to quit the app or return to a parent
-#            scope.
+#  "$exit" — end the flow (emits `flow_finished`). The boot layer declares
+#            what that means by setting `quit_on_finish` BEFORE start();
+#            Flow is what carries it out, because the boot scene is gone by
+#            then — the first change_scene_to_packed frees it, and a signal
+#            connected to a freed node reaches nobody.
 #
 # Flow lives as a child of get_tree().root so it survives the
 # change_scene_to_packed calls it issues to swap screens.
@@ -17,6 +19,12 @@ extends Node
 const EXIT_TARGET: String = "$exit"
 
 signal flow_finished
+
+## What "$exit" means. The boot layer sets it before `start()`: true when the
+## flow is the whole application, false when something outside is waiting to
+## take control back. Either way `flow_finished` still fires first, so a live
+## listener can act before the tree goes down.
+var quit_on_finish: bool = false
 
 var _flow_data: Dictionary = {}
 var _steps_by_id: Dictionary = {}    # step_id -> step Dictionary
@@ -120,5 +128,8 @@ func _on_transition_requested(transition_name: String) -> void:
 		return
 	if target == EXIT_TARGET:
 		flow_finished.emit()
+		if quit_on_finish:
+			Log.log(self, "info", "Flow: reached $exit — quitting.")
+			get_tree().quit()
 		return
 	_goto(target)
