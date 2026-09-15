@@ -27,16 +27,18 @@ var _defs: Dictionary = {}
 var _base_json: Dictionary = {}
 
 func _read_json(path: String) -> Dictionary:
+	var parsed: Variant = _parse_json(path)
+	return parsed as Dictionary if parsed is Dictionary else {}
+
+# Unlike _read_json this keeps an array instead of discarding it, because a
+# Thing file is allowed to hold a list of them.
+func _parse_json(path: String) -> Variant:
 	if path == "":
-		return {}
+		return null
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return {}
-	var text: String = file.get_as_text()
-	var parsed: Variant = JSON.parse_string(text)
-	if parsed is Dictionary:
-		return parsed
-	return {}
+		return null
+	return JSON.parse_string(file.get_as_text())
 
 func scan() -> void:
 	_scripts.clear()
@@ -158,38 +160,69 @@ func _scan_things(content_roots: Array[String]) -> void:
 			_scan_thing_dir(def, things_root + "/" + def_id)
 		things_dir.list_dir_end()
 
-# Walks `things/<def_id>/<thing_id>/<thing_id>.json` where the inner
-# JSON shares the folder name (so `things/worldgen/pao_de_acucar/
-# pao_de_acucar.json`). Subfolders that do NOT carry a matching JSON
-# are treated as ORGANIZATIONAL — the scanner recurses into them so a
-# def can group its Things into subdirectories like `editions/prime/`
-# or `castas/captivi/` without inventing new ids. The first match
-# wins (a folder named `foo` containing `foo.json` is parsed as Thing
-# `foo`, not recursed into).
-func _scan_thing_dir(def: Def, def_things_root: String) -> void:
-	var def_dir: DirAccess = DirAccess.open(def_things_root)
-	if def_dir == null:
+# Walks everything under `things/<def_id>/` and hands each Thing it finds to
+# the Def. LAYOUT IS CONVENTION, NOT STRUCTURE:
+#
+#   things/team/flag_kings/flag_kings.json    one Thing, id from the folder
+#   things/actor/flag_kings/qb.json           one Thing, id from inside
+#   things/actor/flag_kings/squad.json        an ARRAY: many Things, one file
+#   things/actor/everybody.json               all of them, flat
+#
+# All four are the same content organised differently, and a curator should be
+# able to pick whichever fits how they actually work — by club, by
+# neighbourhood, by whatever — without the engine caring. Files are read
+# before subdirectories and both are sorted, so the merge order is the same on
+# every machine rather than whatever the filesystem happened to hand back.
+func _scan_thing_dir(def: Def, dir_path: String) -> void:
+	var dir: DirAccess = DirAccess.open(dir_path)
+	if dir == null:
 		return
-	def_dir.list_dir_begin()
+	var files: Array[String] = []
+	var subdirs: Array[String] = []
+	dir.list_dir_begin()
 	while true:
-		var entry: String = def_dir.get_next()
+		var entry: String = dir.get_next()
 		if entry == "":
 			break
-		if entry.begins_with(".") or not def_dir.current_is_dir():
+		if entry.begins_with("."):
 			continue
-		var entry_path: String = def_things_root + "/" + entry
-		var json_path: String = entry_path + "/" + entry + "." + JSON_EXT
-		var raw: Dictionary = _read_json(json_path)
-		if not raw.is_empty():
-			print("[DefManager]       thing_id=", entry, " path=", json_path)
-			if not raw.has("id"):
-				raw["id"] = entry    # Convenience: folder name IS the id by default
-			def.add_thing(raw)
-		else:
-			# No matching JSON — treat as organizational subdir + recurse.
-			print("[DefManager]       subdir=", entry, " (recursing)")
-			_scan_thing_dir(def, entry_path)
-	def_dir.list_dir_end()
+		if dir.current_is_dir():
+			subdirs.append(entry)
+		elif entry.get_extension().to_lower() == JSON_EXT:
+			files.append(entry)
+	dir.list_dir_end()
+	files.sort()
+	subdirs.sort()
+	for file_name: String in files:
+		_ingest_thing_file(def, dir_path + "/" + file_name)
+	for sub_dir: String in subdirs:
+		_scan_thing_dir(def, dir_path + "/" + sub_dir)
+
+# One file holds one Thing (a JSON object) or many (a JSON array).
+func _ingest_thing_file(def: Def, path: String) -> void:
+	var parsed: Variant = _parse_json(path)
+	if parsed is Dictionary:
+		# The filename is the id when the Thing does not name itself, which is
+		# what makes `<folder>/<folder>.json` keep working.
+		_ingest_thing(def, parsed as Dictionary, path, path.get_file().get_basename())
+	elif parsed is Array:
+		for entry: Variant in (parsed as Array):
+			if entry is Dictionary:
+				# No filename fallback here: one name cannot identify many.
+				_ingest_thing(def, entry as Dictionary, path, "")
+			else:
+				push_error("[DefManager] %s: array entry is not an object" % path)
+	elif parsed != null:
+		push_error("[DefManager] %s: expected an object or an array" % path)
+
+func _ingest_thing(def: Def, raw: Dictionary, path: String, fallback_id: String) -> void:
+	if not raw.has("id") or String(raw["id"]).strip_edges() == "":
+		if fallback_id == "":
+			push_error("[DefManager] %s: Thing without an id" % path)
+			return
+		raw["id"] = fallback_id
+	print("[DefManager]       thing_id=", raw["id"], " path=", path)
+	def.add_thing(raw)
 
 func get_def(def_id: String) -> Def:
 	return _defs.get(_key(def_id), null)
