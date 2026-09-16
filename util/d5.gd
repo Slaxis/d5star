@@ -57,3 +57,32 @@ static func _roll(rng: RandomNumberGenerator, depth: int) -> int:
 	if face == MIN_FACE:
 		return -_roll(rng, depth + 1)
 	return face
+
+# --- The other reading of the same die ---
+#
+# A TALLY instead of a magnitude, the way White Wolf counts: 5 is one success,
+# 0 is one failure, 1..4 is nothing happened, and both ends explode. So a week
+# of training asks "how many successes today" rather than "how much".
+#
+# Centred on zero and symmetric: 67% of rolls are a flat nothing, ~11% each way
+# is a single success or failure, and the tails past that are where the day you
+# remember lives. That shape is the point — most days do not move a needle.
+static func successes(rng: RandomNumberGenerator) -> int:
+	return _successes(rng, 0)
+
+# Several days at once, summed.
+static func successes_many(rng: RandomNumberGenerator, rolls: int) -> int:
+	var total: int = 0
+	for _i: int in range(maxi(rolls, 0)):
+		total += successes(rng)
+	return total
+
+static func _successes(rng: RandomNumberGenerator, depth: int) -> int:
+	if depth >= MAX_CHAIN:
+		return 0
+	var face: int = rng.randi_range(MIN_FACE, MAX_FACE)
+	if face == MAX_FACE:
+		return 1 + _successes(rng, depth + 1)
+	if face == MIN_FACE:
+		return -1 + _successes(rng, depth + 1)
+	return 0
