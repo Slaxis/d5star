@@ -89,24 +89,24 @@ localização do script, então a lib funciona de qualquer pasta.
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 54 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 55 nomes
 colide com a engine:
 
 ```
-AncestorValidator   Asset          AssetManager      Bus
-Card                CardView       ClassRefValidator Cmd
-Codex               D5Manager      Deck              Def
-DefManager          Directories    DirectoriesParser Flow
-Game                Hand           HandView          JsonLoader
-Loader              MediaHub       Menu              ModuleInfo
-ModuleManager       Overlay        Parser            ParserManager
-PartsValidator      PathManager    ResourceManager   RuleHub
-RulesParser         SceneFlow      SceneLoader       ScriptBindingValidator
-ScriptLoader        SeedRng        ShaderLoader      Record
-SoundLoader         TextureLoader  Thing             ThingAssembler
-ThingCatalog        ThingData      ThingHub          ThingPart
-ThingStateMachine   ThingType      ThingVariant      Validator
-ValidatorManager    World
+AncestorValidator  Asset                   AssetManager       Bus
+Card               CardView                ClassRefValidator  Cmd
+Codex              D5                      D5Manager          Deck
+Def                DefManager              Directories        DirectoriesParser
+Flow               Game                    Hand               HandView
+JsonLoader         Loader                  MediaHub           Menu
+ModuleInfo         ModuleManager           Overlay            Parser
+ParserManager      PartsValidator          PathManager        Record
+ResourceManager    RuleHub                 RulesParser        SceneFlow
+SceneLoader        ScriptBindingValidator  ScriptLoader       SeedRng
+ShaderLoader       SoundLoader             TextureLoader      Thing
+ThingAssembler     ThingCatalog            ThingData          ThingHub
+ThingPart          ThingStateMachine       ThingType          ThingVariant
+Validator          ValidatorManager        World
 ```
 
 Três nomes já foram cedidos aos jogos de propósito, porque eram genéricos

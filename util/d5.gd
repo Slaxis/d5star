@@ -20,9 +20,11 @@ class_name D5
 const MIN_FACE := 0
 const MAX_FACE := 5
 const DEFAULT_DICE := 2
-# Each explosion is a 1-in-6 event, so a chain of 12 has odds around 1 in 2
-# billion. The cap exists so a pathological RNG cannot hang a match, never
-# because the chain is expected to reach it.
+# A 0 and a 5 both continue the chain, so each roll explodes with odds of 1
+# in 3 and a chain of 12 comes up once in 531,441 dice (1 in 6 per step only
+# holds for a run in a single direction). Rare, and harmless when it happens:
+# the die just stops exploding, which trims the far tail. The cap exists so a
+# pathological RNG cannot hang a match.
 const MAX_CHAIN := 12
 
 # One d5*, explosions included.
