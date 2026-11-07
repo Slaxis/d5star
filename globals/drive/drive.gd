@@ -297,7 +297,7 @@ func scene(scene_id: String) -> PackedScene:
 	return rm.load_resource(path) as PackedScene
 
 # class_name → Script via ResourceManager.resolve_class. Used for
-# JSON entries like `"class": "GuanabaraMapGen"`.
+# JSON entries like `"class": "CoastStep"`.
 func script(class_name_str: String) -> Script:
 	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
 	if rm == null:

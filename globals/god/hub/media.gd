@@ -9,7 +9,7 @@ extends RefCounted
 class_name MediaHub
 
 # class_name → Script via the project class registry. Used for JSON
-# entries like `"class": "GuanabaraMapGen"`.
+# entries like `"class": "CoastStep"`.
 func script(class_name_str: String) -> Script:
 	return Drive.script(class_name_str)
 

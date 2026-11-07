@@ -9,15 +9,22 @@
 # signals beyond what it subscribes to. Many parts per Thing is
 # cheap. Attach wires the part into the Thing's local `mind` bus.
 #
-# Lifetime is coupled to the parent Thing via attach/detach. A Part
-# can outlive its Thing in principle (it's RefCounted), but should
-# detach() first to avoid dangling subscriptions.
+# The Thing owns its parts and a part only points back weakly, so
+# dropping the last reference to a Thing frees the Thing and its
+# parts with no detach. A part someone else still holds can outlive
+# its Thing: `big_thing` just reads null from then on.
 extends ThingData
 class_name ThingPart
 
 var part_id: String = ""
 var ancestor: String = ""
-var big_thing: Thing = null
+var big_thing: Thing:
+	get:
+		return null if _big_thing == null else _big_thing.get_ref() as Thing
+	set(value):
+		_big_thing = null if value == null else weakref(value)
+
+var _big_thing: WeakRef = null
 
 func _apply_data(new_id: String, new_ancestor: String, new_data: Dictionary) -> void:
 	part_id = new_id

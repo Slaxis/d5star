@@ -12,8 +12,8 @@
 #                            piece of the game world."
 #
 # When to use Record:
-#   • Maleta UI builds it, Board reads it
-#   • Worldgen accepts Laser / MapSize Snapshots
+#   • A setup screen builds it, the board reads it
+#   • A generator accepts a typed Snapshot of its options
 #   • Save game stores typed snapshots instead of raw Dictionaries
 #
 # Subclasses declare their fields (typed vars, enums) and optionally

@@ -4,7 +4,7 @@
 # cover def-shaped payloads like `map_gens: [{class: "..."}]` or
 # worldgen `steps: [{class: "..."}]`).
 #
-# Catches typos like `"class": "GanabaraMapGen"` that would fail
+# Catches typos like `"class": "CostaStep"` that would fail
 # silently at runtime with a "class not found" warning.
 extends Validator
 class_name ClassRefValidator
