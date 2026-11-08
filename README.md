@@ -14,6 +14,9 @@ azarão vencer sem que ninguém tenha inclinado a régua a favor dele.
 D5.roll(rng)                    # um d5*
 D5.check(base, rng)             # base + 2d5*
 D5.contest(ataque, defesa, rng) # margem: > 0 significa que o ataque venceu
+D5.read(rng)                    # 2d5* lido duas vezes: total e estrelas (os 5 que somaram)
+D5.against(base, 5, rng)        # contra uma dificuldade: margem, graus (margem ÷ 5) e estrelas
+D5.versus(ataque, defesa, rng)  # a disputa com as estrelas de cada lado
 ```
 
 Consumida como **git submodule** em `res://addons/d5star/`.

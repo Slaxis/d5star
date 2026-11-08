@@ -88,3 +88,87 @@ static func _successes(rng: RandomNumberGenerator, depth: int) -> int:
 	if face == MIN_FACE:
 		return -1 + _successes(rng, depth + 1)
 	return 0
+
+# --- Stars: one roll, read for its total and for its fives ---
+#
+# The same throw as `roll`, the same total from the same RNG, read twice. Its
+# STARS are the 5s that added to the total. A 5 that comes up while the chain
+# runs down, after an odd number of 0s, makes the total worse, so it is no star.
+# Stars are counted apart from the total: a roll can lose and still shine, and
+# each game decides what a star buys.
+#
+#   5, 3        total  8, one star
+#   5, 0, 5, 2  total -2, one star: the second 5 fell while subtracting
+#   0, 0, 5, 1  total  6, one star: two 0s turned the chain back up
+#
+# A d5* gives 0.21 stars on average, so 2d5* gives 0.42.
+
+# Five points of margin are one degree: a 17 against a difficulty of 5 is 2.4 degrees.
+const DEGREE := 5
+
+# One roll read both ways.
+class Roll:
+	extends RefCounted
+	var total: int = 0
+	var stars: int = 0
+
+# A roll held against something else: a fixed difficulty, or another roll.
+class Outcome:
+	extends RefCounted
+	# How far past it the roll went; negative when it fell short.
+	var margin: int = 0
+	# The actor's stars, which count win or lose.
+	var stars: int = 0
+	# The other side's stars in a contest; always 0 against a difficulty.
+	var foe_stars: int = 0
+
+	# The margin in degrees of DEGREE points, fractions kept.
+	func degrees() -> float:
+		return float(margin) / float(DEGREE)
+
+# The sum of `count` d5*, read both ways.
+static func read(rng: RandomNumberGenerator, count: int = DEFAULT_DICE) -> Roll:
+	var out := Roll.new()
+	for _i: int in range(maxi(count, 0)):
+		_read_one(rng, out)
+	return out
+
+# A base value plus dice against a fixed difficulty.
+static func against(base: int, difficulty: int, rng: RandomNumberGenerator,
+		dice: int = DEFAULT_DICE) -> Outcome:
+	var dice_roll: Roll = read(rng, dice)
+	var out := Outcome.new()
+	out.margin = base + dice_roll.total - difficulty
+	out.stars = dice_roll.stars
+	return out
+
+# Both sides roll, the attacker first, as in `contest`: the margin is the
+# attacker's, and each side keeps its own stars.
+static func versus(attacker_base: int, defender_base: int, rng: RandomNumberGenerator,
+		dice: int = DEFAULT_DICE) -> Outcome:
+	var attack: Roll = read(rng, dice)
+	var defense: Roll = read(rng, dice)
+	var out := Outcome.new()
+	out.margin = (attacker_base + attack.total) - (defender_base + defense.total)
+	out.stars = attack.stars
+	out.foe_stars = defense.stars
+	return out
+
+# One d5* into `into`: the same draws as `_roll`, walked as a loop, with the direction
+# of the chain kept so a 5 knows whether it adds.
+static func _read_one(rng: RandomNumberGenerator, into: Roll) -> void:
+	var direction: int = 1
+	for depth: int in MAX_CHAIN + 1:
+		var face: int = rng.randi_range(MIN_FACE, MAX_FACE)
+		if depth >= MAX_CHAIN:
+			into.total += direction * face
+			return
+		if face == MAX_FACE:
+			into.total += direction * MAX_FACE
+			if direction > 0:
+				into.stars += 1
+		elif face == MIN_FACE:
+			direction = -direction
+		else:
+			into.total += direction * face
+			return
