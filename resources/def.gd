@@ -3,7 +3,7 @@
 #
 # Two ingestion modes are supported:
 #   1. Single-file legacy mode: `load_data(raw)` receives the whole JSON
-#      from `game/defs/<def_id>.json`. Used by Defs whose data is small
+#      beside its script, `<defs folder>/<def_id>.json`. Used by Defs whose data is small
 #      enough to live in one file (color_palette, terrain, …).
 #   2. Per-thing mode: `add_thing(thing)` receives ONE entry parsed
 #      from `<module>/things/<def_id>/<thing_id>/<thing_id>.json`. The

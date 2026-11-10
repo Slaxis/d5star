@@ -87,28 +87,33 @@ default, então um projeto novo boota sem criar o arquivo.
 `engine_root` não é configurável: o `Drive` deriva a raiz da própria
 localização do script, então a lib funciona de qualquer pasta.
 
+A lib registra sozinha os Defs da pasta `defs/` dela (`library_defs` no
+`engine.json`), antes dos do jogo: hoje o `flow`, o `FlowDef` que guarda os
+fluxos de telas. O jogo só escreve os fluxos em `content/things/flow/`. Um
+Def do jogo com o mesmo id toma o lugar do da lib.
+
 ---
 
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 50 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 51 nomes
 colide com a engine:
 
 ```
 AncestorValidator   Asset                    AssetManager        Bus
 ClassRefValidator   Cmd                      Codex               D5
 D5Manager           Def                      DefManager          Directories
-DirectoriesParser   Flow                     Game                JsonLoader
-Loader              MediaHub                 Menu                ModuleInfo
-ModuleManager       Overlay                  Parser              ParserManager
-PartsValidator      PathManager              Record              ResourceManager
-RuleHub             RulesParser              SceneFlow           SceneLoader
-ScriptBindingValidator  ScriptLoader             SeedRng             ShaderLoader
-SoundLoader         TextureLoader            Thing               ThingAssembler
-ThingCatalog        ThingData                ThingHub            ThingPart
-ThingStateMachine   ThingType                ThingVariant        Validator
-ValidatorManager    World
+DirectoriesParser   Flow                     FlowDef             Game
+JsonLoader          Loader                   MediaHub            Menu
+ModuleInfo          ModuleManager            Overlay             Parser
+ParserManager       PartsValidator           PathManager         Record
+ResourceManager     RuleHub                  RulesParser         SceneFlow
+SceneLoader         ScriptBindingValidator   ScriptLoader        SeedRng
+ShaderLoader        SoundLoader              TextureLoader       Thing
+ThingAssembler      ThingCatalog             ThingData           ThingHub
+ThingPart           ThingStateMachine        ThingType           ThingVariant
+Validator           ValidatorManager         World
 ```
 
 Três nomes já foram cedidos aos jogos de propósito, porque eram genéricos

@@ -21,11 +21,11 @@ func _ready() -> void:
 	var flow_id: String = the_rules.get_flow()
 	var flow_def: FlowDef = Drive.def("flow") as FlowDef
 	if flow_def == null:
-		_boot_error("FlowDef not registered — check game/defs/flow.gd.")
+		_boot_error("No FlowDef as the Def 'flow' — check the library's defs/flow.gd, or a game Def of that id.")
 		return
 	var flow_data: Dictionary = flow_def.get_flow(flow_id)
 	if flow_data.is_empty():
-		_boot_error("Flow '" + flow_id + "' not found — check content/things/flow/<id>/<id>.json.")
+		_boot_error("Flow '" + flow_id + "' not found — check content/things/flow/ in the module.")
 		return
 	# Flow lives as a child of the SceneTree root so it survives the
 	# change_scene_to_packed calls it issues to swap screens; otherwise

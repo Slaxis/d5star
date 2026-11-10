@@ -1,4 +1,9 @@
 # DefManager: discovers, loads, and manages game definitions (Def subclasses).
+#
+# Two folders hold Defs, one `.gd` each, its file name the Def's id: the
+# library's own, `<engine_root>/defs/` (`library_defs` in engine.json), read
+# first, and the game's, `game/defs/` (`defs` in d5star.json). A Def of the
+# game with the id of one of the library's takes its place.
 extends D5Manager
 class_name DefManager
 
@@ -9,6 +14,7 @@ const JSON_EXT := "json"
 func manager_id() -> String: return ID
 
 var defs_root: String = "res://game/defs"
+var library_defs_root: String = ""
 var system_subdir: String = "system"
 # Subdirectory inside a module's content_root that holds per-Thing
 # Def entries (one folder per Thing: `things/<def_id>/<thing_id>/<thing_id>.json`).
@@ -19,6 +25,7 @@ var def_things_subdir: String = "things"
 func configure(config: Dictionary) -> void:
 	var game_root: String = "res://" + String(config.get("game_root", "game"))
 	defs_root = game_root + "/" + String(config.get("defs", "defs"))
+	library_defs_root = "res://" + String(config.get("engine_root", "engine")) + "/" + String(config.get("library_defs", "defs"))
 	system_subdir = String(config.get("system", system_subdir))
 	def_things_subdir = String(config.get("def_things", def_things_subdir))
 
@@ -44,7 +51,14 @@ func scan() -> void:
 	_scripts.clear()
 	_defs.clear()
 	_base_json.clear()
-	var root: String = defs_root
+	for root: String in [library_defs_root, defs_root]:
+		_scan_defs(root)
+
+# One folder of Defs. A later folder overwrites an earlier one's Def of the
+# same id, which is how a game's Def takes the place of the library's.
+func _scan_defs(root: String) -> void:
+	if root == "":
+		return
 	var dir: DirAccess = DirAccess.open(root)
 	if dir == null:
 		return
