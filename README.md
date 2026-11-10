@@ -90,9 +90,11 @@ localização do script, então a lib funciona de qualquer pasta.
 Toda coisa embaixo de `content/things/` de um módulo diz o Def dela,
 `"def": "<id>"`, nela ou no ancestral dela, e a pasta onde ela está não conta.
 Um Def fornecido, um script do jogo com aquele id em `game/defs/`, recebe a
-coisa; sem script, a lib infere um `KindDef`, uma tabela, que vive enquanto o
-módulo está ativo. Qualquer outra coisa é erro, com o caminho do arquivo, em
-`Drive.def_errors()`, e o `Game` não sobe.
+coisa se for um `KindDef`, o único Def que guarda coisas; sem script, a lib
+infere um `KindDef`, uma tabela, que vive enquanto o módulo está ativo.
+Qualquer outra coisa é erro, com o caminho do arquivo, em `Drive.def_errors()`,
+e o `Game` não sobe: uma coisa com `"def": "rules"`, por exemplo, já que o
+`RulesDef` lê o JSON dele inteiro e não guarda coisa.
 
 A lib não fornece Def nenhum. Os fluxos de telas são coisas com
 `"def": "flow"`, e o `Game` pega deles o fluxo que as regras nomeiam.

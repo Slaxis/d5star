@@ -7,9 +7,10 @@
 #
 # Every Thing under a module's `things/` names its Def, `"def": "<id>"`, in
 # itself or in its ancestor, and the folder it sits in does not count. The
-# provided Def of that id takes the Thing; with none, the Thing goes to a
-# KindDef inferred for that id, which lives while its module is active. A
-# Thing with no way to its Def is an error, with its path: `errors()`.
+# provided Def of that id takes the Thing, and must be a KindDef, the only Def
+# that holds Things; with none, the Thing goes to a KindDef inferred for that
+# id, which lives while its module is active. A Thing with no way to its Def,
+# or of a Def that holds no Things, is an error, with its path: `errors()`.
 extends D5Manager
 class_name DefManager
 
@@ -230,8 +231,11 @@ func _take(raw: Dictionary, path: String, fallback_id: String, found: Array[Dict
 
 # ─── Placing them ─────────────────────────────────────────────────
 
-# Each Thing to the Def it names, in the order read. A template, `abstract`,
-# only gives itself to the Things that name it as their ancestor.
+# Each Thing to the KindDef it names, in the order read: the one a script
+# provides, or one inferred for that id. A template, `abstract`, only gives
+# itself to the Things that name it as their ancestor. A Thing of a Def that
+# holds no Things, such as one that loads its JSON whole, template or not,
+# goes nowhere, after saying so.
 func _place(found: Array[Dictionary]) -> void:
 	var by_id: Dictionary = {}    # id -> its Things, in the order read
 	for entry: Dictionary in found:
@@ -242,20 +246,28 @@ func _place(found: Array[Dictionary]) -> void:
 	var placed: int = 0
 	for entry: Dictionary in found:
 		var def_id: String = _def_of(entry, by_id, [])
-		if def_id == "" or bool(entry["thing"].get(KEY_ABSTRACT, false)):
+		if def_id == "":
+			continue
+		var def: Def = _defs.get(def_id, null)
+		if def != null and not def is KindDef:
+			var how: String = "names the def" if entry["thing"].has(KEY_DEF) else "takes from its ancestor the def"
+			_error(entry["path"], "'%s' %s '%s', which holds no Things" % [
+				_key(String(entry["thing"][KEY_ID])), how, def_id])
+			continue
+		if bool(entry["thing"].get(KEY_ABSTRACT, false)):
 			continue
 		var data: Variant = _data_of(entry, def_id, by_id, [])
 		if data == null:
 			continue
-		var def: Def = _defs.get(def_id, null)
-		if def == null:
-			def = KindDef.new()
-			def.def_id = def_id
-			_defs[def_id] = def
+		var kind: KindDef = def as KindDef
+		if kind == null:
+			kind = KindDef.new()
+			kind.def_id = def_id
+			_defs[def_id] = kind
 			_inferred.append(def_id)
 		var thing: Dictionary = { KEY_ID: entry["thing"][KEY_ID] }
 		thing.merge(data as Dictionary)
-		def.add_thing(thing)
+		kind.add_thing(thing)
 		placed += 1
 	if not found.is_empty():
 		print("[DefManager] %d of %d Things placed; %d Defs, %d of them inferred; %d errors" % [

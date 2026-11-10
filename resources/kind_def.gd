@@ -1,9 +1,10 @@
-# KindDef — a kind of thing, as one table. D5Star infers one for every def a
-# Thing names that no script provides, and a script may extend it to give a
-# kind more, as the provided Def of that id. Its Things come back as one
-# table, id -> row, in the order they were read; a row is the Thing without
-# its `id`. A module overrides a thing by shipping one with the same id, which
-# keeps its place, and adds one with a new id, which goes at the end.
+# KindDef — a kind of thing, as one table, and the only Def that holds
+# Things. D5Star infers one for every def a Thing names that no script
+# provides, and a script extends it to give a kind more, as the provided Def
+# of that id. Its Things come back as one table, id -> row, in the order they
+# were read; a row is the Thing without its `id`. A module overrides a thing
+# by shipping one with the same id, which keeps its place, and adds one with a
+# new id, which goes at the end.
 class_name KindDef
 extends Def
 
@@ -12,6 +13,8 @@ var _things: Dictionary = {}    # id -> the Thing as read, in the order read
 # A KindDef holds Things only, so it keeps Def's `load_data`, which complains:
 # a JSON beside a script that extends it is a mistake.
 
+# One Thing that names this Def, with its `id` and without the keys that place
+# it. The DefManager calls it once per Thing, in the order read.
 func add_thing(thing: Dictionary) -> void:
 	_things[String(thing["id"])] = thing
 

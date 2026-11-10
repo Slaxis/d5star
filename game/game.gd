@@ -1,5 +1,5 @@
 # Game entrypoint: activate the default module, stop if any of its Things has
-# no way to its Def, load rules, hand the active Flow to a Flow runtime that
+# no Def to hold it, load rules, hand the active Flow to a Flow runtime that
 # survives scene swaps.
 extends Node2D
 class_name Game
@@ -16,7 +16,7 @@ func _ready() -> void:
 		return
 	var lost: Array[String] = Drive.def_errors()
 	if not lost.is_empty():
-		_boot_error("Things with no way to their Def:\n" + "\n".join(lost))
+		_boot_error("Things with no Def to hold them:\n" + "\n".join(lost))
 		return
 	The.load_rules()
 	var the_rules: Codex = The.rules
