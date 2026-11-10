@@ -4,15 +4,20 @@
 # `load()`, `ResourceLoader`, `FileAccess`, or `ProjectSettings`
 # directly. The only escape is `_bootstrap_json` below, used to
 # read the engine config before ResourceManager exists.
+#
+# The module is the ModuleManager's: Drive passes its calls through, and
+# each manager that keeps something of the module hears the change on its
+# own, so Drive knows none of them.
 extends Node
 
 const ENGINE_CONFIG_NAME := "engine.json"
 const PROJECT_CONFIG := "res://d5star.json"
 
+# The active module changed, after every manager heard it: for the rest of
+# the game, such as God.
 signal active_module_changed(module_id: String)
 
 var _managers: Dictionary = {}  # manager_id -> D5Manager
-var _module_id: String = ""
 
 # --- Bootstrap (only for engine config — ResourceManager isn't alive yet) ---
 
@@ -111,6 +116,7 @@ func _set_managers() -> void:
 	var dm := DefManager.new()
 	dm.configure(config)
 	_register(dm)
+	_hear_the_module(mm)
 	var am: AssetManager = _m(AssetManager.ID) as AssetManager
 	var pr: ParserManager = _m(ParserManager.ID) as ParserManager
 	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
@@ -125,7 +131,18 @@ func _set_managers() -> void:
 func _ready() -> void:
 	_set_managers()
 
-# --- Module API ---
+# Every other manager hears the module change from the ModuleManager, in the
+# order they were registered, and then the rest of the game, through
+# `active_module_changed`. A manager that keeps something of the module
+# overrides `D5Manager.on_module_changed`; the others keep nothing.
+func _hear_the_module(mm: ModuleManager) -> void:
+	for mgr: D5Manager in _managers.values():
+		if mgr != mm:
+			mm.module_changed.connect(mgr.on_module_changed)
+	mm.module_changed.connect(func(module_id: String, _content_roots: Array[String], _module_root: String) -> void:
+		active_module_changed.emit(module_id))
+
+# --- Module API: the ModuleManager's, passed through ---
 
 func list_modules() -> Array[ModuleInfo]:
 	var mm: ModuleManager = _m(ModuleManager.ID) as ModuleManager
@@ -134,47 +151,17 @@ func list_modules() -> Array[ModuleInfo]:
 	return mm.list_all()
 
 func set_module(id: String) -> bool:
-	var key: String = id.strip_edges().to_lower()
-	if key == "":
-		Log.log(self, "error", "Drive: set_module called with empty id.")
-		return false
 	var mm: ModuleManager = _m(ModuleManager.ID) as ModuleManager
 	if mm == null:
 		Log.log(self, "error", "Drive: ModuleManager not initialized.")
 		return false
-	# Resolve the module and its dependency closure (R3 — module.requires).
-	var load_order: Array[String] = mm.resolve_load_order(key)
-	if load_order.is_empty():
-		Log.log(self, "error", "Drive: cannot activate module '" + key + "' — missing or cyclic dependencies.")
-		return false
-	# Content roots, highest priority first: the active module, then the
-	# modules it requires (so the active module overrides its dependencies).
-	var content_roots: Array[String] = []
-	for i: int in range(load_order.size() - 1, -1, -1):
-		content_roots.append_array(mm.get_content_roots(load_order[i]))
-	if content_roots.is_empty():
-		Log.log(self, "error", "Drive: no content roots found for module: " + key)
-		return false
-	var module_root: String = mm.get_module_root(key)
-	var pm: PathManager = _m(PathManager.ID) as PathManager
-	if pm == null:
-		Log.log(self, "error", "Drive: PathManager not initialized.")
-		return false
-	pm.set_module_roots(content_roots, module_root)
-	var dm: DefManager = _m(DefManager.ID) as DefManager
-	if dm != null:
-		dm.apply_module_overrides(content_roots)
-	# Resource cache is module-scoped — paths shift on switch, stale
-	# entries would silently return the wrong module's assets.
-	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
-	if rm != null:
-		rm.reset()
-	_module_id = key
-	active_module_changed.emit(key)
-	return true
+	return mm.activate(id)
 
 func active_module() -> String:
-	return _module_id
+	var mm: ModuleManager = _m(ModuleManager.ID) as ModuleManager
+	if mm == null:
+		return ""
+	return mm.active()
 
 # Runs every registered Validator against the given ThingHub (which
 # carries the catalog + Drive access). Returns the aggregated list of

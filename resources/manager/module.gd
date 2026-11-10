@@ -1,11 +1,20 @@
 # ModuleManager: discovers native and user modules, resolves content roots
-# and dependency load order.
+# and dependency load order, and keeps the active module. Activating one
+# works out its content roots and tells the managers that listen, through
+# `module_changed`, so no one else needs to know which managers keep
+# something of the module. (Not `changed`: every Resource has that signal.)
 extends D5Manager
 class_name ModuleManager
 
 const ID := "modules"
 
+# The active module changed: its id, the content roots of it and of the
+# modules it requires, highest priority first, and its own folder.
+signal module_changed(module_id: String, content_roots: Array[String], module_root: String)
+
 func manager_id() -> String: return ID
+
+var _active: String = ""
 
 var native_root: String = "res://game/modules"
 var user_root: String = "user://modules"
@@ -112,6 +121,35 @@ func get_module_root(id: String) -> String:
 	if info != null and info.native_path != "":
 		return info.native_path
 	return ""
+
+# --- The active module ---
+
+# Activates a module and the modules it requires. The content roots come
+# highest priority first, the module before its dependencies, so it overrides
+# them. With a dependency missing or in a circle, or no content at all,
+# nothing changes and it returns false.
+func activate(id: String) -> bool:
+	var key: String = _key(id)
+	if key == "":
+		Log.log(self, "error", "ModuleManager: activate called with an empty id.")
+		return false
+	var load_order: Array[String] = resolve_load_order(key)
+	if load_order.is_empty():
+		Log.log(self, "error", "ModuleManager: cannot activate module '" + key + "' — missing or cyclic dependencies.")
+		return false
+	var content_roots: Array[String] = []
+	for i: int in range(load_order.size() - 1, -1, -1):
+		content_roots.append_array(get_content_roots(load_order[i]))
+	if content_roots.is_empty():
+		Log.log(self, "error", "ModuleManager: no content roots found for module: " + key)
+		return false
+	_active = key
+	module_changed.emit(key, content_roots, get_module_root(key))
+	return true
+
+# The active module's id; empty before the first activation.
+func active() -> String:
+	return _active
 
 # --- Dependency resolution (R3 — module.requires) ---
 

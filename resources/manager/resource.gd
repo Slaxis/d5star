@@ -109,7 +109,11 @@ func resolve_class_by_filename(basename: String) -> String:
 
 # Clears the resource cache. Class path cache is preserved because
 # `class_name` declarations don't shift between modules — they're
-# baked into ProjectSettings at editor time. Called by Drive on
-# module change.
+# baked into ProjectSettings at editor time.
 func reset() -> void:
 	_cache.clear()
+
+# The cache is module-scoped: paths shift on a switch, and a stale entry
+# would silently return the last module's assets.
+func on_module_changed(_module_id: String, _content_roots: Array[String], _module_root: String) -> void:
+	reset()

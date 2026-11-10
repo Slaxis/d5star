@@ -41,6 +41,10 @@ func set_module_roots(roots: Array[String], module_root: String) -> void:
 	_content_roots = roots.duplicate()
 	_module_root = module_root
 
+# The module changed: its content roots and its folder are the ones to read.
+func on_module_changed(_module_id: String, content_roots: Array[String], module_root: String) -> void:
+	set_module_roots(content_roots, module_root)
+
 func register_resolver(resource_id: String, fn: Callable) -> void:
 	_resolvers[resource_id.to_lower()] = fn
 

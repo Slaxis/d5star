@@ -144,6 +144,11 @@ func _apply_override(def_id: String, content_roots: Array[String]) -> void:
 	for raw: Dictionary in overrides:
 		active_def.merge_data(raw)
 
+# The module changed: its Things, and its overrides of the provided Defs,
+# take the last module's place.
+func on_module_changed(_module_id: String, content_roots: Array[String], _module_root: String) -> void:
+	apply_module_overrides(content_roots)
+
 # Content roots come highest priority first: the active module, then the
 # modules it requires.
 func apply_module_overrides(content_roots: Array[String]) -> void:
