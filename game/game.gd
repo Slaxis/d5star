@@ -1,5 +1,6 @@
-# Game entrypoint: activate the default module, load rules, hand the
-# active Flow to a Flow runtime that survives scene swaps.
+# Game entrypoint: activate the default module, stop if any of its Things has
+# no way to its Def, load rules, hand the active Flow to a Flow runtime that
+# survives scene swaps.
 extends Node2D
 class_name Game
 
@@ -13,19 +14,21 @@ func _ready() -> void:
 	if not Drive.set_module(modules[0].id):
 		_boot_error("Failed to activate module: " + modules[0].id)
 		return
+	var lost: Array[String] = Drive.def_errors()
+	if not lost.is_empty():
+		_boot_error("Things with no way to their Def:\n" + "\n".join(lost))
+		return
 	The.load_rules()
 	var the_rules: Codex = The.rules
 	if the_rules == null or not the_rules.is_valid():
 		_boot_error("Invalid rules — check content/system/game.json in module '" + modules[0].id + "'.")
 		return
+	# The flows of screens are Things of the Def `flow`, which D5Star infers.
 	var flow_id: String = the_rules.get_flow()
-	var flow_def: FlowDef = Drive.def("flow") as FlowDef
-	if flow_def == null:
-		_boot_error("No FlowDef as the Def 'flow' — check the library's defs/flow.gd, or a game Def of that id.")
-		return
-	var flow_data: Dictionary = flow_def.get_flow(flow_id)
+	var flows: KindDef = Drive.def("flow") as KindDef
+	var flow_data: Dictionary = flows.get_thing(flow_id) if flows != null else {}
 	if flow_data.is_empty():
-		_boot_error("Flow '" + flow_id + "' not found — check content/things/flow/ in the module.")
+		_boot_error("Flow '" + flow_id + "' not found — no Thing of the module with \"def\": \"flow\" has that id.")
 		return
 	# Flow lives as a child of the SceneTree root so it survives the
 	# change_scene_to_packed calls it issues to swap screens; otherwise

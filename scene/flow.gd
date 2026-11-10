@@ -1,5 +1,5 @@
 # Flow runtime — drives the player through a sequence of Scenes.
-# Loads the JSON declaration (a FlowDef Thing), instantiates each
+# Loads the JSON declaration (a Thing of the Def `flow`), instantiates each
 # step's scene_file via God.media.scene(), validates that the required
 # Snapshots exist in The.board before entering, and routes
 # `transition_requested` signals against the step's transitions map.

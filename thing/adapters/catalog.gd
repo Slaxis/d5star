@@ -8,6 +8,7 @@ extends Resource
 class_name ThingCatalog
 
 const KEY_ID := "id"
+const KEY_DEF := "def"
 const KEY_ANCESTOR := "ancestor"
 const KEY_PARTS := "parts"
 const KEY_KIND := "kind"
@@ -20,9 +21,7 @@ var _assembler: ThingAssembler = null
 var _types: Dictionary = {}
 var _resolved: Dictionary = {}
 var _prototypes: Dictionary = {}
-var _index: Dictionary = {}
 var _runtime_specs: Dictionary = {}
-var _runtime_index: Dictionary = {}
 
 func _init() -> void:
 	_assembler = ThingAssembler.new()
@@ -31,15 +30,13 @@ func set_assembler(assembler: ThingAssembler) -> void:
 	if assembler != null:
 		_assembler = assembler
 
-# R4 — clears every cached type, prototype, and index. Called on a
-# module switch so entities from one module never leak into the next.
+# R4 — clears every cached type and prototype. Called on a module switch
+# so entities from one module never leak into the next.
 func reset() -> void:
 	_types.clear()
 	_resolved.clear()
 	_prototypes.clear()
-	_index.clear()
 	_runtime_specs.clear()
-	_runtime_index.clear()
 
 func _is_thing_payload(raw: Dictionary) -> bool:
 	if not raw.has(KEY_ID):
@@ -113,6 +110,7 @@ func _parse_type(raw: Dictionary) -> ThingType:
 	var data: Dictionary = {}
 	var reserved: Dictionary = {
 		KEY_ID: true,
+		KEY_DEF: true,
 		KEY_ANCESTOR: true,
 		KEY_PARTS: true,
 		KEY_KIND: true,
@@ -193,41 +191,6 @@ func _build_prototype(type: ThingType) -> RefCounted:
 		instance.call("_apply_data", type.type_id, type.ancestor, type.data)
 	return instance
 
-func _build_index() -> void:
-	if not _index.is_empty():
-		return
-	var all: Array[Dictionary] = God.media.all_content()
-	for raw: Dictionary in all:
-		if not _is_thing_payload(raw):
-			continue
-		var group: String = String(raw.get("group", "")).strip_edges().to_lower()
-		if group == "":
-			continue
-		var id: String = String(raw.get(KEY_ID, "")).strip_edges().to_lower()
-		if id == "":
-			continue
-		if not _index.has(group):
-			_index[group] = []
-		_index[group].append(id)
-
-func _register_runtime_index(type_id: String, group_id: String) -> void:
-	var group: String = String(group_id).strip_edges().to_lower()
-	if group == "":
-		return
-	if not _runtime_index.has(group):
-		_runtime_index[group] = []
-	var list: Array = _runtime_index[group] as Array
-	if not list.has(type_id):
-		list.append(type_id)
-	_runtime_index[group] = list
-
-func _remove_runtime_index(type_id: String) -> void:
-	for group_key in _runtime_index.keys():
-		var list: Array = _runtime_index[group_key] as Array
-		if list.has(type_id):
-			list.erase(type_id)
-			_runtime_index[group_key] = list
-
 func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 	if spec.is_empty():
 		return null
@@ -245,7 +208,6 @@ func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 		_resolved.erase(type_id)
 		_types.erase(type_id)
 		_prototypes.erase(type_id)
-		_remove_runtime_index(type_id)
 	_runtime_specs[type_id] = raw
 	var base: ThingType = _parse_type(raw)
 	if base.type_id == "":
@@ -272,7 +234,6 @@ func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 	else:
 		base.script_id = script_id
 	_resolved[type_id] = resolved
-	_register_runtime_index(type_id, raw.get("group", ""))
 	return resolved
 
 func load_runtime_types(specs: Array, replace: bool = true) -> void:
@@ -297,7 +258,6 @@ func clear_runtime_types() -> void:
 		_types.erase(type_id)
 		_prototypes.erase(type_id)
 	_runtime_specs.clear()
-	_runtime_index.clear()
 
 func has_runtime_type(type_id: String) -> bool:
 	var key: String = String(type_id).strip_edges().to_lower()
@@ -364,19 +324,3 @@ func build_instance(thing_id: String, script_id: String, data: Dictionary, parts
 	type.parts = parts
 	(_assembler as ThingAssembler).assemble(instance, type, self)
 	return instance
-
-func list_ids_by_group(group_id: String) -> Array[String]:
-	var group: String = String(group_id).strip_edges().to_lower()
-	_build_index()
-	var ids: Array[String] = []
-	if _index.has(group):
-		for entry in _index[group]:
-			var value: String = String(entry)
-			if value != "" and not ids.has(value):
-				ids.append(value)
-	if _runtime_index.has(group):
-		for entry in _runtime_index[group]:
-			var value: String = String(entry)
-			if value != "" and not ids.has(value):
-				ids.append(value)
-	return ids

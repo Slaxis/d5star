@@ -2,7 +2,6 @@
   "parsers": "globals/drive/parser/parsers",
   "loaders": "globals/drive/loader/loaders",
   "validators": "globals/drive/validator/validators",
-  "library_defs": "defs",
   "things": "thing/things",
   "thing_base": "thing/data/thing.gd",
   "thing_part_base": "thing/data/thing_part.gd"

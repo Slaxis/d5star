@@ -227,6 +227,14 @@ func defs() -> Array[String]:
 		return []
 	return dm.list_ids()
 
+# The Things the active modules could not place in a Def, one line each with
+# its path. Empty when every Thing found its Def.
+func def_errors() -> Array[String]:
+	var dm: DefManager = _m(DefManager.ID) as DefManager
+	if dm == null:
+		return []
+	return dm.errors()
+
 # --- Path API ---
 
 func _all_content_roots() -> Array[String]:
@@ -379,20 +387,6 @@ func list_all_content() -> Array[Dictionary]:
 		_scan_files(root, "json", paths)
 		for path: String in paths:
 			results.append_array(_read_things(path))
-	return results
-
-func list_json_by_group(group_id: String) -> Array[Dictionary]:
-	var group: String = String(group_id).strip_edges().to_lower()
-	if group == "":
-		return []
-	var results: Array[Dictionary] = []
-	for root: String in _all_content_roots():
-		var paths: Array[String] = []
-		_scan_files(root, "json", paths)
-		for path: String in paths:
-			for raw: Dictionary in _read_things(path):
-				if String(raw.get("group", "")).strip_edges().to_lower() == group:
-					results.append(raw)
 	return results
 
 # The Things of one content file: the file itself when it is an object, each

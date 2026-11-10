@@ -43,9 +43,6 @@ func register_type(spec: Dictionary, replace: bool = true) -> ThingType:
 func load_types(specs: Array) -> void:
 	_catalog.load_runtime_types(specs)
 
-func list_by_group(group_id: String) -> Array[String]:
-	return _catalog.list_ids_by_group(group_id)
-
 func resolve_type(type_id: String) -> ThingType:
 	return _catalog.resolve_type(type_id)
 

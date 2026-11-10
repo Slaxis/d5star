@@ -27,8 +27,3 @@ func scene(scene_id: String) -> PackedScene:
 
 func json(asset_id: String) -> Dictionary:
 	return Drive.json(asset_id)
-
-# Bulk scan: every JSON across the active module's content roots.
-# Used by ThingCatalog to build its group index; rare from game code.
-func all_content() -> Array[Dictionary]:
-	return Drive.list_all_content()

@@ -1,9 +1,15 @@
 # DefManager: discovers, loads, and manages game definitions (Def subclasses).
 #
-# Two folders hold Defs, one `.gd` each, its file name the Def's id: the
-# library's own, `<engine_root>/defs/` (`library_defs` in engine.json), read
-# first, and the game's, `game/defs/` (`defs` in d5star.json). A Def of the
-# game with the id of one of the library's takes its place.
+# A Def is provided or inferred. A provided Def is a script, one `.gd` each,
+# its file name the Def's id, in the game's folder of Defs, `game/defs/`
+# (`defs` in d5star.json), with an optional `.json` beside it that it loads
+# whole. The library provides none of its own.
+#
+# Every Thing under a module's `things/` names its Def, `"def": "<id>"`, in
+# itself or in its ancestor, and the folder it sits in does not count. The
+# provided Def of that id takes the Thing; with none, the Thing goes to a
+# KindDef inferred for that id, which lives while its module is active. A
+# Thing with no way to its Def is an error, with its path: `errors()`.
 extends D5Manager
 class_name DefManager
 
@@ -11,51 +17,51 @@ const ID := "defs"
 const GD_EXT := "gd"
 const JSON_EXT := "json"
 
+# The keys of a Thing that place it, which no Def receives.
+const KEY_ID := "id"
+const KEY_DEF := "def"
+const KEY_ANCESTOR := "ancestor"
+const KEY_ABSTRACT := "abstract"
+
 func manager_id() -> String: return ID
 
 var defs_root: String = "res://game/defs"
-var library_defs_root: String = ""
 var system_subdir: String = "system"
-# Subdirectory inside a module's content_root that holds per-Thing
-# Def entries (one folder per Thing: `things/<def_id>/<thing_id>/<thing_id>.json`).
-# Renamed `def_things` to avoid colliding with the engine-level
-# `"things"` config (which points at the legacy Thing autoload base).
+# Subdirectory inside a module's content_root that holds the Things, at any
+# depth. Named `def_things` in the config to avoid colliding with the
+# engine-level `"things"` (which points at the legacy Thing autoload base).
 var def_things_subdir: String = "things"
 
 func configure(config: Dictionary) -> void:
 	var game_root: String = "res://" + String(config.get("game_root", "game"))
 	defs_root = game_root + "/" + String(config.get("defs", "defs"))
-	library_defs_root = "res://" + String(config.get("engine_root", "engine")) + "/" + String(config.get("library_defs", "defs"))
 	system_subdir = String(config.get("system", system_subdir))
 	def_things_subdir = String(config.get("def_things", def_things_subdir))
 
 var _scripts: Dictionary = {}
 var _defs: Dictionary = {}
 var _base_json: Dictionary = {}
+var _inferred: Array[String] = []    # the KindDefs inferred for the active modules
+var _errors: Array[String] = []      # the Things the last activation could not place
 
 func _read_json(path: String) -> Dictionary:
-	var parsed: Variant = _parse_json(path)
-	return parsed as Dictionary if parsed is Dictionary else {}
-
-# Unlike _read_json this keeps an array instead of discarding it, because a
-# Thing file is allowed to hold a list of them.
-func _parse_json(path: String) -> Variant:
 	if path == "":
-		return null
+		return {}
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return null
-	return JSON.parse_string(file.get_as_text())
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	return parsed as Dictionary if parsed is Dictionary else {}
 
 func scan() -> void:
 	_scripts.clear()
 	_defs.clear()
 	_base_json.clear()
-	for root: String in [library_defs_root, defs_root]:
-		_scan_defs(root)
+	_inferred.clear()
+	_errors.clear()
+	_scan_defs(defs_root)
 
-# One folder of Defs. A later folder overwrites an earlier one's Def of the
-# same id, which is how a game's Def takes the place of the library's.
+# The provided Defs: each script of the folder whose instance is a Def.
 func _scan_defs(root: String) -> void:
 	if root == "":
 		return
@@ -137,57 +143,38 @@ func _apply_override(def_id: String, content_roots: Array[String]) -> void:
 	for raw: Dictionary in overrides:
 		active_def.merge_data(raw)
 
+# Content roots come highest priority first: the active module, then the
+# modules it requires.
 func apply_module_overrides(content_roots: Array[String]) -> void:
+	for def_id: String in _inferred:
+		_defs.erase(def_id)
+	_inferred.clear()
+	_errors.clear()
 	for def_id: String in _scripts.keys():
 		_reset_def(def_id)
 	for def_id: String in _scripts.keys():
 		_apply_override(def_id, content_roots)
-	# After legacy overrides settle, scan each module's `things/`
-	# subtree and feed per-Thing JSONs into the matching Defs via
-	# Def.add_thing(). Defs that don't override add_thing() silently
-	# ignore — keeps backward compat with the single-file mode.
-	_scan_things(content_roots)
+	_place(_read_things(content_roots))
 
-# Walks every active module's `<root>/<def_things_subdir>/<def_id>/<thing_id>/<thing_id>.json`
-# and routes each Thing to its Def via Def.add_thing(). Modules later in
-# content_roots[] overwrite earlier ones for the same Thing id.
-func _scan_things(content_roots: Array[String]) -> void:
-	print("[DefManager] _scan_things: content_roots=", content_roots, " def_things_subdir=", def_things_subdir)
-	print("[DefManager] _defs keys=", _defs.keys())
-	for root: String in content_roots:
-		var things_root: String = root + "/" + def_things_subdir
-		var things_dir: DirAccess = DirAccess.open(things_root)
-		print("[DefManager]   root=", things_root, " dir_open=", things_dir != null)
-		if things_dir == null:
-			continue
-		things_dir.list_dir_begin()
-		while true:
-			var def_id: String = things_dir.get_next()
-			if def_id == "":
-				break
-			if def_id.begins_with(".") or not things_dir.current_is_dir():
-				continue
-			print("[DefManager]     found def_id=", def_id, " is_def=", _defs.has(def_id))
-			var def: Def = _defs.get(def_id, null)
-			if def == null:
-				continue    # Module dropped Things for a Def we don't know
-			_scan_thing_dir(def, things_root + "/" + def_id)
-		things_dir.list_dir_end()
+# What the last activation could not place, one line each, with its path.
+func errors() -> Array[String]:
+	return _errors.duplicate()
 
-# Walks everything under `things/<def_id>/` and hands each Thing it finds to
-# the Def. LAYOUT IS CONVENTION, NOT STRUCTURE:
-#
-#   things/team/flag_kings/flag_kings.json    one Thing, id from the folder
-#   things/actor/flag_kings/qb.json           one Thing, id from inside
-#   things/actor/flag_kings/squad.json        an ARRAY: many Things, one file
-#   things/actor/everybody.json               all of them, flat
-#
-# All four are the same content organised differently, and a curator should be
-# able to pick whichever fits how they actually work — by club, by
-# neighbourhood, by whatever — without the engine caring. Files are read
-# before subdirectories and both are sorted, so the merge order is the same on
-# every machine rather than whatever the filesystem happened to hand back.
-func _scan_thing_dir(def: Def, dir_path: String) -> void:
+# ─── Reading the Things ───────────────────────────────────────────
+
+# Every Thing of the active modules, lowest priority first, so a Thing of the
+# active module takes the place of its dependency's Thing of the same id, and
+# a new one goes to the end. Inside a module the walk is the same on every
+# machine: files before folders, both sorted, at any depth. One file holds
+# one Thing (an object, its id the file name when it names none) or many (a
+# list). Each Thing comes as { "thing": Dictionary, "path": String }.
+func _read_things(content_roots: Array[String]) -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	for i: int in range(content_roots.size() - 1, -1, -1):
+		_read_dir(content_roots[i] + "/" + def_things_subdir, found)
+	return found
+
+func _read_dir(dir_path: String, found: Array[Dictionary]) -> void:
 	var dir: DirAccess = DirAccess.open(dir_path)
 	if dir == null:
 		return
@@ -208,35 +195,144 @@ func _scan_thing_dir(def: Def, dir_path: String) -> void:
 	files.sort()
 	subdirs.sort()
 	for file_name: String in files:
-		_ingest_thing_file(def, dir_path + "/" + file_name)
+		_read_file(dir_path + "/" + file_name, found)
 	for sub_dir: String in subdirs:
-		_scan_thing_dir(def, dir_path + "/" + sub_dir)
+		_read_dir(dir_path + "/" + sub_dir, found)
 
-# One file holds one Thing (a JSON object) or many (a JSON array).
-func _ingest_thing_file(def: Def, path: String) -> void:
-	var parsed: Variant = _parse_json(path)
+func _read_file(path: String, found: Array[Dictionary]) -> void:
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		_error(path, "could not be opened")
+		return
+	var json: JSON = JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		_error(path, "not JSON, line %d: %s" % [json.get_error_line(), json.get_error_message()])
+		return
+	var parsed: Variant = json.data
 	if parsed is Dictionary:
-		# The filename is the id when the Thing does not name itself, which is
-		# what makes `<folder>/<folder>.json` keep working.
-		_ingest_thing(def, parsed as Dictionary, path, path.get_file().get_basename())
+		_take(parsed as Dictionary, path, path.get_file().get_basename(), found)
 	elif parsed is Array:
 		for entry: Variant in (parsed as Array):
 			if entry is Dictionary:
-				# No filename fallback here: one name cannot identify many.
-				_ingest_thing(def, entry as Dictionary, path, "")
+				_take(entry as Dictionary, path, "", found)
 			else:
-				push_error("[DefManager] %s: array entry is not an object" % path)
-	elif parsed != null:
-		push_error("[DefManager] %s: expected an object or an array" % path)
+				_error(path, "an entry of the list is not an object")
+	else:
+		_error(path, "not an object nor a list of objects")
 
-func _ingest_thing(def: Def, raw: Dictionary, path: String, fallback_id: String) -> void:
-	if not raw.has("id") or String(raw["id"]).strip_edges() == "":
+func _take(raw: Dictionary, path: String, fallback_id: String, found: Array[Dictionary]) -> void:
+	if String(raw.get(KEY_ID, "")).strip_edges() == "":
 		if fallback_id == "":
-			push_error("[DefManager] %s: Thing without an id" % path)
+			_error(path, "a Thing without an id")
 			return
-		raw["id"] = fallback_id
-	print("[DefManager]       thing_id=", raw["id"], " path=", path)
-	def.add_thing(raw)
+		raw[KEY_ID] = fallback_id
+	found.append({ "thing": raw, "path": path })
+
+# ─── Placing them ─────────────────────────────────────────────────
+
+# Each Thing to the Def it names, in the order read. A template, `abstract`,
+# only gives itself to the Things that name it as their ancestor.
+func _place(found: Array[Dictionary]) -> void:
+	var by_id: Dictionary = {}    # id -> its Things, in the order read
+	for entry: Dictionary in found:
+		var id: String = _key(String(entry["thing"][KEY_ID]))
+		if not by_id.has(id):
+			by_id[id] = []
+		(by_id[id] as Array).append(entry)
+	var placed: int = 0
+	for entry: Dictionary in found:
+		var def_id: String = _def_of(entry, by_id, [])
+		if def_id == "" or bool(entry["thing"].get(KEY_ABSTRACT, false)):
+			continue
+		var data: Variant = _data_of(entry, def_id, by_id, [])
+		if data == null:
+			continue
+		var def: Def = _defs.get(def_id, null)
+		if def == null:
+			def = KindDef.new()
+			def.def_id = def_id
+			_defs[def_id] = def
+			_inferred.append(def_id)
+		var thing: Dictionary = { KEY_ID: entry["thing"][KEY_ID] }
+		thing.merge(data as Dictionary)
+		def.add_thing(thing)
+		placed += 1
+	if not found.is_empty():
+		print("[DefManager] %d of %d Things placed; %d Defs, %d of them inferred; %d errors" % [
+			placed, found.size(), _defs.size(), _inferred.size(), _errors.size()])
+
+# The id of the Def a Thing names, in itself or up its ancestors; "" when
+# there is none, after saying why. Each Thing is worked out once.
+func _def_of(entry: Dictionary, by_id: Dictionary, chain: Array) -> String:
+	if entry.has("def"):
+		return String(entry["def"])
+	var thing: Dictionary = entry["thing"]
+	var id: String = _key(String(thing[KEY_ID]))
+	var def_id: String = ""
+	if thing.has(KEY_DEF):
+		def_id = _key(String(thing[KEY_DEF]))
+		if def_id == "":
+			_error(entry["path"], "'%s' names an empty def" % id)
+	elif String(thing.get(KEY_ANCESTOR, "")).strip_edges() == "":
+		_error(entry["path"], "'%s' names no def, and has no ancestor to take one from" % id)
+	elif chain.has(id):
+		_error(entry["path"], "'%s' is its own ancestor: %s" % [id, " -> ".join(chain + [id])])
+	else:
+		var ancestor: String = _key(String(thing[KEY_ANCESTOR]))
+		var defs: Array[String] = []
+		for other: Dictionary in by_id.get(ancestor, []):
+			var other_def: String = _def_of(other, by_id, chain + [id])
+			if other_def != "" and not defs.has(other_def):
+				defs.append(other_def)
+		if entry.has("def"):
+			return String(entry["def"])    # a circle back to this Thing, said where it closed
+		if not by_id.has(ancestor):
+			_error(entry["path"], "'%s' names the ancestor '%s', and no Thing is '%s'" % [id, ancestor, ancestor])
+		elif defs.size() > 1:
+			_error(entry["path"], "'%s' names the ancestor '%s', a Thing of %s: say its def" % [id, ancestor, " and ".join(defs)])
+		elif defs.is_empty():
+			_error(entry["path"], "'%s' names the ancestor '%s', which has no def" % [id, ancestor])
+		else:
+			def_id = defs[0]
+	entry["def"] = def_id
+	return def_id
+
+# A Thing's data, without the keys that place it: its own, merged over its
+# ancestor's as D5Star merges Things, the ancestor being the last Thing read
+# with that id in the same Def. null when the ancestor is not there, after
+# saying why. Each Thing is worked out once.
+func _data_of(entry: Dictionary, def_id: String, by_id: Dictionary, chain: Array) -> Variant:
+	if entry.has("data"):
+		return entry["data"]
+	var thing: Dictionary = entry["thing"]
+	var id: String = _key(String(thing[KEY_ID]))
+	var own: Dictionary = {}
+	for key: Variant in thing:
+		if not [KEY_ID, KEY_DEF, KEY_ANCESTOR, KEY_ABSTRACT].has(key):
+			own[key] = thing[key]
+	var ancestor: String = _key(String(thing.get(KEY_ANCESTOR, "")))
+	var data: Variant = own
+	if ancestor != "":
+		data = null
+		var base: Dictionary = {}
+		for other: Dictionary in by_id.get(ancestor, []):
+			if _def_of(other, by_id, []) == def_id:
+				base = other
+		if chain.has(id):
+			_error(entry["path"], "'%s' is its own ancestor: %s" % [id, " -> ".join(chain + [id])])
+		elif base.is_empty():
+			_error(entry["path"], "'%s' names the ancestor '%s', which is no Thing of the def '%s'" % [id, ancestor, def_id])
+		else:
+			var inherited: Variant = _data_of(base, def_id, by_id, chain + [id])
+			if inherited != null:
+				data = ThingVariant.merge(inherited, own)
+	entry["data"] = data
+	return data
+
+func _error(path: String, message: String) -> void:
+	var line: String = "%s: %s" % [path, message]
+	_errors.append(line)
+	push_error("[DefManager] " + line)
 
 func get_def(def_id: String) -> Def:
 	return _defs.get(_key(def_id), null)

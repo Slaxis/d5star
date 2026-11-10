@@ -87,10 +87,15 @@ default, então um projeto novo boota sem criar o arquivo.
 `engine_root` não é configurável: o `Drive` deriva a raiz da própria
 localização do script, então a lib funciona de qualquer pasta.
 
-A lib registra sozinha os Defs da pasta `defs/` dela (`library_defs` no
-`engine.json`), antes dos do jogo: hoje o `flow`, o `FlowDef` que guarda os
-fluxos de telas. O jogo só escreve os fluxos em `content/things/flow/`. Um
-Def do jogo com o mesmo id toma o lugar do da lib.
+Toda coisa embaixo de `content/things/` de um módulo diz o Def dela,
+`"def": "<id>"`, nela ou no ancestral dela, e a pasta onde ela está não conta.
+Um Def fornecido, um script do jogo com aquele id em `game/defs/`, recebe a
+coisa; sem script, a lib infere um `KindDef`, uma tabela, que vive enquanto o
+módulo está ativo. Qualquer outra coisa é erro, com o caminho do arquivo, em
+`Drive.def_errors()`, e o `Game` não sobe.
+
+A lib não fornece Def nenhum. Os fluxos de telas são coisas com
+`"def": "flow"`, e o `Game` pega deles o fluxo que as regras nomeiam.
 
 ---
 
@@ -101,18 +106,18 @@ global do projeto inteiro. Um jogo que declarar qualquer um destes 51 nomes
 colide com a engine:
 
 ```
-AncestorValidator   Asset                    AssetManager        Bus
-ClassRefValidator   Cmd                      Codex               D5
-D5Manager           Def                      DefManager          Directories
-DirectoriesParser   Flow                     FlowDef             Game
-JsonLoader          Loader                   MediaHub            Menu
-ModuleInfo          ModuleManager            Overlay             Parser
-ParserManager       PartsValidator           PathManager         Record
-ResourceManager     RuleHub                  RulesParser         SceneFlow
-SceneLoader         ScriptBindingValidator   ScriptLoader        SeedRng
-ShaderLoader        SoundLoader              TextureLoader       Thing
-ThingAssembler      ThingCatalog             ThingData           ThingHub
-ThingPart           ThingStateMachine        ThingType           ThingVariant
+AncestorValidator   Asset                    AssetManager    Bus
+ClassRefValidator   Cmd                      Codex           D5
+D5Manager           Def                      DefManager      Directories
+DirectoriesParser   Flow                     Game            JsonLoader
+KindDef             Loader                   MediaHub        Menu
+ModuleInfo          ModuleManager            Overlay         Parser
+ParserManager       PartsValidator           PathManager     Record
+ResourceManager     RuleHub                  RulesParser     SceneFlow
+SceneLoader         ScriptBindingValidator   ScriptLoader    SeedRng
+ShaderLoader        SoundLoader              TextureLoader   Thing
+ThingAssembler      ThingCatalog             ThingData       ThingHub
+ThingPart           ThingStateMachine        ThingType       ThingVariant
 Validator           ValidatorManager         World
 ```
 
