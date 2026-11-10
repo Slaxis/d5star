@@ -370,15 +370,15 @@ func read_content(path: String) -> Dictionary:
 	var raw: Variant = rm.load_resource(path)
 	return raw if raw is Dictionary else {}
 
+# Every Thing across the content roots, as raw JSON. A file holds one Thing
+# (an object) or many (an array): the same two shapes DefManager reads.
 func list_all_content() -> Array[Dictionary]:
 	var results: Array[Dictionary] = []
 	for root: String in _all_content_roots():
 		var paths: Array[String] = []
 		_scan_files(root, "json", paths)
 		for path: String in paths:
-			var raw: Dictionary = read_content(path)
-			if not raw.is_empty():
-				results.append(raw)
+			results.append_array(_read_things(path))
 	return results
 
 func list_json_by_group(group_id: String) -> Array[Dictionary]:
@@ -390,9 +390,19 @@ func list_json_by_group(group_id: String) -> Array[Dictionary]:
 		var paths: Array[String] = []
 		_scan_files(root, "json", paths)
 		for path: String in paths:
-			var raw: Dictionary = read_content(path)
-			if raw.is_empty():
-				continue
-			if String(raw.get("group", "")).strip_edges().to_lower() == group:
-				results.append(raw)
+			for raw: Dictionary in _read_things(path):
+				if String(raw.get("group", "")).strip_edges().to_lower() == group:
+					results.append(raw)
 	return results
+
+# The Things of one content file: the file itself when it is an object, each
+# of its objects when it is an array. Empty objects are skipped.
+func _read_things(path: String) -> Array[Dictionary]:
+	var things: Array[Dictionary] = []
+	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
+	var raw: Variant = rm.load_resource(path) if rm != null else _bootstrap_json(path)
+	var entries: Array = raw if raw is Array else [raw]
+	for entry: Variant in entries:
+		if entry is Dictionary and not (entry as Dictionary).is_empty():
+			things.append(entry as Dictionary)
+	return things

@@ -1,7 +1,8 @@
-# JSON returns Dictionary (not a Resource). Godot's load() doesn't
-# parse .json into a Dictionary, so this loader reads + parses
-# directly — the only Loader that bypasses load(). Kept here so the
-# bypass is encapsulated in one place.
+# JSON returns its root as parsed (not a Resource): a Dictionary, or an
+# Array, because a Thing file may hold a list of Things, as DefManager
+# reads it. Godot's load() doesn't parse .json, so this loader reads +
+# parses directly — the only Loader that bypasses load(). Kept here so
+# the bypass is encapsulated in one place.
 extends Loader
 class_name JsonLoader
 
@@ -20,7 +21,7 @@ func load_resource(path: String) -> Variant:
 	if parsed == null:
 		Log.log(self, "error", "JsonLoader: failed to parse " + path)
 		return {}
-	if parsed is Dictionary:
+	if parsed is Dictionary or parsed is Array:
 		return parsed
-	Log.log(self, "error", "JsonLoader: root must be an object: " + path)
+	Log.log(self, "error", "JsonLoader: root must be an object or an array: " + path)
 	return {}
