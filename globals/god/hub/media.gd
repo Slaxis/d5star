@@ -2,10 +2,11 @@
 # `God.media.texture(id)` (etc.) and never touches Drive directly.
 #
 # Stateless: Drive owns the cache, MediaHub just provides the
-# game-facing surface. Single audit point for "everything game code
-# asks the engine to load". Future home for preload strategies,
-# cache policies, or per-type fallbacks if those become needs.
-extends RefCounted
+# game-facing surface, so it keeps nothing of the module. Single audit
+# point for "everything game code asks the engine to load". Future home
+# for preload strategies, cache policies, or per-type fallbacks if those
+# become needs.
+extends D5Hub
 class_name MediaHub
 
 # class_name → Script via the project class registry. Used for JSON

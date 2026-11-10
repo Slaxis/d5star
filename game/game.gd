@@ -18,9 +18,8 @@ func _ready() -> void:
 	if not lost.is_empty():
 		_boot_error("Things with no Def to hold them:\n" + "\n".join(lost))
 		return
-	The.load_rules()
-	var the_rules: Codex = The.rules
-	if the_rules == null or not the_rules.is_valid():
+	var the_rules: Codex = God.rules.current()
+	if not the_rules.is_valid():
 		_boot_error("Invalid rules — check content/system/game.json in module '" + modules[0].id + "'.")
 		return
 	# The flows of screens are Things of the Def `flow`, which D5Star infers.

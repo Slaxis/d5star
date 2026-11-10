@@ -3,7 +3,11 @@
 # as they appear (typed reads, flow/bindings shortcuts, derived
 # values). Keeping it isolated now means future rule logic doesn't
 # bloat God or get scattered.
-extends RefCounted
+#
+# It keeps nothing of the module: the Codex is the ParserManager's,
+# which drops it when the module changes, so `current()` reads the new
+# module's.
+extends D5Hub
 class_name RuleHub
 
 # Active rules for the loaded module. Returns an empty Codex when

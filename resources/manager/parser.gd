@@ -1,4 +1,5 @@
 # Parser manager: registers parser scripts and caches parsed resources.
+# The cache is module-scoped: the resources come from the module's files.
 extends D5Manager
 class_name ParserManager
 
@@ -8,6 +9,12 @@ func manager_id() -> String: return ID
 
 var parsers: Dictionary = {}
 var parsed: Dictionary = {}
+
+# The module changed: what was parsed from the last module's files, its
+# rules and its directories, goes with it, and the new module's is parsed
+# when first asked for. The parsers stay: they are the engine's.
+func on_module_changed(_module_id: String, _content_roots: Array[String], _module_root: String) -> void:
+	parsed.clear()
 
 func _parser_resource_id(asset_id: String) -> String:
 	var normalized_id: String = String(asset_id).strip_edges().to_lower()

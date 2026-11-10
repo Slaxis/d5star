@@ -104,23 +104,23 @@ A lib não fornece Def nenhum. Os fluxos de telas são coisas com
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 51 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 52 nomes
 colide com a engine:
 
 ```
-AncestorValidator   Asset                    AssetManager    Bus
-ClassRefValidator   Cmd                      Codex           D5
-D5Manager           Def                      DefManager      Directories
-DirectoriesParser   Flow                     Game            JsonLoader
-KindDef             Loader                   MediaHub        Menu
-ModuleInfo          ModuleManager            Overlay         Parser
-ParserManager       PartsValidator           PathManager     Record
-ResourceManager     RuleHub                  RulesParser     SceneFlow
-SceneLoader         ScriptBindingValidator   ScriptLoader    SeedRng
-ShaderLoader        SoundLoader              TextureLoader   Thing
-ThingAssembler      ThingCatalog             ThingData       ThingHub
-ThingPart           ThingStateMachine        ThingType       ThingVariant
-Validator           ValidatorManager         World
+AncestorValidator   Asset               AssetManager             Bus
+ClassRefValidator   Cmd                 Codex                    D5
+D5Hub               D5Manager           Def                      DefManager
+Directories         DirectoriesParser   Flow                     Game
+JsonLoader          KindDef             Loader                   MediaHub
+Menu                ModuleInfo          ModuleManager            Overlay
+Parser              ParserManager       PartsValidator           PathManager
+Record              ResourceManager     RuleHub                  RulesParser
+SceneFlow           SceneLoader         ScriptBindingValidator   ScriptLoader
+SeedRng             ShaderLoader        SoundLoader              TextureLoader
+Thing               ThingAssembler      ThingCatalog             ThingData
+ThingHub            ThingPart           ThingStateMachine        ThingType
+ThingVariant        Validator           ValidatorManager         World
 ```
 
 Três nomes já foram cedidos aos jogos de propósito, porque eram genéricos

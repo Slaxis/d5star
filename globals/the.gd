@@ -1,26 +1,17 @@
 # The — the Blackboard. A shared, typed key/value store that flows between
 # scenes: screens write Records to it, later screens and systems read them, and
 # the Flow gates its own transitions on which keys are present.
+#
+# It keeps nothing of the module, so it has nothing to drop when the module
+# changes: the rules are God's (`God.rules.current()`) and so are the scenes
+# (`God.media.scene()`), cached by Drive's managers, which hear the change.
 # Layer: The -> God -> Drive.
 extends Node
 
-var rules: Codex = null
-var scenes: Dictionary = {}
 var board: Dictionary = {}
 
 func _ready() -> void:
 	pass
-
-func load_rules() -> void:
-	rules = God.rules.current()
-
-func scene(scene_id: String) -> PackedScene:
-	if scenes.has(scene_id):
-		return scenes[scene_id]
-	var the_scene: PackedScene = God.media.scene(scene_id)
-	if the_scene:
-		scenes[scene_id] = the_scene
-	return the_scene
 
 func next_scene(packed: PackedScene) -> void:
 	if packed == null:

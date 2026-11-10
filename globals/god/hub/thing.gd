@@ -1,11 +1,11 @@
 # ThingHub — owns the Thing system end-to-end: the ThingCatalog
 # (types + prototypes + runtime registrations), Thing instantiation,
-# and Thing-specific content lookup. One of three Hubs that compose
+# and Thing-specific content lookup. One of the three Hubs that compose
 # God; see god.gd for the coordinator.
 #
-# Module-scoped state — God forwards `active_module_changed` to us
-# via `on_module_changed()` so we can flush the catalog.
-extends RefCounted
+# Module-scoped state: the only Hub that keeps something of the module,
+# so the only one that overrides `D5Hub.on_module_changed`.
+extends D5Hub
 class_name ThingHub
 
 var _catalog: ThingCatalog = null
@@ -17,7 +17,7 @@ func _init() -> void:
 # from one module don't leak into the next. Then run the cross-ref
 # validation pass so broken references (typos, missing base types,
 # unknown class_names) surface immediately as warnings.
-func on_module_changed() -> void:
+func on_module_changed(_module_id: String) -> void:
 	if _catalog != null:
 		_catalog.reset()
 	_run_validation()

@@ -1,13 +1,13 @@
 # God — game-facing service locator. Autoload entry composed of
-# three Hubs:
+# three Hubs, each a D5Hub:
 #
 #   God.things  — ThingHub: Thing system (catalog, lifecycle, content)
 #   God.rules   — RuleHub:  active Codex resource + future rule queries
 #   God.media   — MediaHub: typed media facade (texture/shader/sound/scene/script/json)
 #
 # Game code calls God.<hub>.<method>; God itself holds zero domain
-# logic, just constructs the three Hubs and forwards Drive's
-# module-changed signal to ThingHub.
+# logic: it builds the Hubs and connects each to Drive's module
+# change, without knowing which of them keeps something of the module.
 #
 # Layer rule: game code → God; engine plumbing → Drive. The Hubs
 # call Drive for resolution; only Loaders touch Godot's resource
@@ -22,9 +22,10 @@ func _ready() -> void:
 	things = ThingHub.new()
 	rules = RuleHub.new()
 	media = MediaHub.new()
-	Drive.active_module_changed.connect(_on_module_changed)
+	for hub: D5Hub in hubs():
+		Drive.active_module_changed.connect(hub.on_module_changed)
 
-# R4 — forward module switch to Thing system (the only Hub with
-# module-scoped state). Drive itself flushes ResourceManager cache.
-func _on_module_changed(_module_id: String) -> void:
-	things.on_module_changed()
+# Every Hub of God, in the order they hear the module change.
+func hubs() -> Array[D5Hub]:
+	var all: Array[D5Hub] = [things, rules, media]
+	return all
