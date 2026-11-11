@@ -15,6 +15,7 @@ var game_root: String = RES_ROOT + "game"
 var parsers_subpath: String = "globals/drive/parser/parsers"
 var loaders_subpath: String = "globals/drive/loader/loaders"
 var validators_subpath: String = "globals/drive/validator/validators"
+var operators_subpath: String = "thing/data/operators"
 var things_subpath: String = "thing/things"
 var thing_base_subpath: String = "thing/data/thing.gd"
 var thing_part_base_subpath: String = "thing/data/thing_part.gd"
@@ -27,6 +28,7 @@ func configure(config: Dictionary) -> void:
 	parsers_subpath = String(config.get("parsers", parsers_subpath))
 	loaders_subpath = String(config.get("loaders", loaders_subpath))
 	validators_subpath = String(config.get("validators", validators_subpath))
+	operators_subpath = String(config.get("operators", operators_subpath))
 	things_subpath = String(config.get("things", things_subpath))
 	thing_base_subpath = String(config.get("thing_base", thing_base_subpath))
 	thing_part_base_subpath = String(config.get("thing_part_base", thing_part_base_subpath))
@@ -110,6 +112,10 @@ func loaders_root() -> String:
 
 func validators_root() -> String:
 	return engine_root + "/" + validators_subpath
+
+# The operations of the merge, one script each: ThingVariant's "+" and others.
+func operators_root() -> String:
+	return engine_root + "/" + operators_subpath
 
 func things_path() -> String:
 	return engine_root + "/" + things_subpath

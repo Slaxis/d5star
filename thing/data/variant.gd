@@ -1,162 +1,104 @@
-# ThingVariant: merges data with operator semantics.
-# Operators are injectable via register_operator().
-# Prefix "=" escapes literals: "=+courage" -> "+courage" (verbatim).
+# ThingVariant: the merge of data over the data it inherits, a Thing's over
+# its ancestor's and a part's over its own. ThingCatalog and DefManager call
+# it before the data is stored.
+#
+# It walks the data: a dictionary over a dictionary merges key by key, a list
+# over a list joins it, and any other value stands in for the inherited one,
+# unless it is a text that opens with the symbol of an operation, which works
+# on the inherited value: "+1" over 2 is 3. A dictionary of one key, the
+# symbol of an operation that takes lists, over a list is that operation:
+# {"+": [...]}. A text that opens with "=" is the text after it, verbatim:
+# "=+10" is "+10".
+#
+# The operations are ThingOperators, kept by their symbol, and ThingVariant
+# names none: Drive registers the scripts of their folder at boot, and a mod
+# may register one of its own. A text takes the longest symbol it opens with
+# that leaves an operand after it, so a "+>" is never read as a "+".
 extends RefCounted
 class_name ThingVariant
 
-const OP_ADD := "+"
-const OP_SUB := "-"
-const OP_MUL := "*"
-const OP_DIV := "/"
+const ESCAPE := "="
 
-static var _op_registry: Dictionary = {}
+static var _operators: Dictionary = {}  # symbol -> ThingOperator
 
-# --- Leaf helpers ---
+# The operation joins the merge, or takes the place of the one with its symbol.
+static func register_operator(op: ThingOperator) -> void:
+	if op == null or op.symbol() == "":
+		return
+	_operators[op.symbol()] = op
 
-static func _parse_bool(text: String) -> bool:
-	var lowered: String = text.strip_edges().to_lower()
-	return lowered == "true" or lowered == "1"
+# The operation leaves the merge, and its symbol is text again.
+static func unregister_operator(symbol: String) -> void:
+	_operators.erase(symbol)
 
-static func _parse_number(text: String) -> Variant:
-	var stripped: String = text.strip_edges()
-	if stripped.is_valid_float():
-		return float(stripped)
-	return null
+# The operation of a symbol, or null.
+static func operator(symbol: String) -> ThingOperator:
+	return _operators.get(symbol, null)
 
-static func _apply_operator(base: Variant, op: String, operand_raw: String) -> Variant:
-	var operand_text: String = operand_raw.strip_edges()
-	if base is String:
-		if op == OP_ADD:
-			return String(base) + operand_text
-		return operand_text
-	if base is bool:
-		var operand_bool: bool = _parse_bool(operand_text)
-		if op == OP_MUL:
-			return bool(base) and operand_bool
-		if op == OP_ADD:
-			return bool(base) or operand_bool
-		return operand_bool
-	if base is int or base is float:
-		var parsed: Variant = _parse_number(operand_text)
-		if parsed == null:
-			return base
-		var base_value: float = float(base)
-		var operand_value: float = float(parsed)
-		match op:
-			OP_ADD:
-				return base_value + operand_value
-			OP_SUB:
-				return base_value - operand_value
-			OP_MUL:
-				return base_value * operand_value
-			OP_DIV:
-				return base_value if operand_value == 0.0 else base_value / operand_value
-		return base_value
-	var parsed_bool: bool = _parse_bool(operand_text)
-	if operand_text.to_lower() == "true" or operand_text.to_lower() == "false":
-		return parsed_bool
-	var parsed_number: Variant = _parse_number(operand_text)
-	if parsed_number != null:
-		return parsed_number
-	return operand_text
+# The symbols of the operations, in the order they were registered.
+static func symbols() -> Array[String]:
+	var out: Array[String] = []
+	for symbol: String in _operators.keys():
+		out.append(symbol)
+	return out
 
-# --- Registry ---
-
-static func _ensure_defaults() -> void:
-	if not _op_registry.has(OP_ADD):
-		_op_registry[OP_ADD] = func(b: Variant, o: String) -> Variant: return _apply_operator(b, OP_ADD, o)
-	if not _op_registry.has(OP_SUB):
-		_op_registry[OP_SUB] = func(b: Variant, o: String) -> Variant: return _apply_operator(b, OP_SUB, o)
-	if not _op_registry.has(OP_MUL):
-		_op_registry[OP_MUL] = func(b: Variant, o: String) -> Variant: return _apply_operator(b, OP_MUL, o)
-	if not _op_registry.has(OP_DIV):
-		_op_registry[OP_DIV] = func(b: Variant, o: String) -> Variant: return _apply_operator(b, OP_DIV, o)
-
-static func register_operator(op_char: String, fn: Callable) -> void:
-	_op_registry[op_char] = fn
-
-static func _operator_char(value: String) -> String:
-	_ensure_defaults()
-	if value.begins_with("="):
-		return ""
-	for op: String in _op_registry.keys():
-		if value.begins_with(op) and value.length() > op.length():
-			return op
-	return ""
-
-# --- Merge helpers ---
-
-static func _array_operator(extra: Dictionary) -> String:
-	if extra.size() != 1:
-		return ""
-	var keys: Array = extra.keys()
-	if keys.is_empty():
-		return ""
-	var key: String = String(keys[0])
-	if key != OP_ADD and key != OP_MUL:
-		return ""
-	if not extra.get(key, null) is Array:
-		return ""
-	return key
-
-static func _merge_array(base: Array, extra: Array) -> Array:
-	var merged: Array = []
-	for item: Variant in base:
-		merged.append(item)
-	for item: Variant in extra:
-		merged.append(item)
-	return merged
-
-static func _merge_array_by_index(base: Array, extra: Array) -> Array:
-	var merged: Array = []
-	var max_size: int = max(base.size(), extra.size())
-	for index: int in range(max_size):
-		var base_value: Variant = null
-		var extra_value: Variant = null
-		if index < base.size():
-			base_value = base[index]
-		if index < extra.size():
-			extra_value = extra[index]
-		if index < extra.size():
-			merged.append(_merge_value(base_value, extra_value))
-		else:
-			merged.append(base_value)
-	return merged
-
-static func _merge_dict(base: Dictionary, extra: Dictionary) -> Dictionary:
-	var merged: Dictionary = base.duplicate(true)
-	for key: Variant in extra.keys():
-		var base_value: Variant = merged.get(key, null)
-		merged[key] = _merge_value(base_value, extra[key])
-	return merged
-
-static func _merge_value(base: Variant, extra: Variant) -> Variant:
+# The data given over the data inherited.
+static func merge(base: Variant, extra: Variant) -> Variant:
 	if extra == null:
 		return base
 	if extra is Dictionary:
-		var op: String = _array_operator(extra as Dictionary)
-		if op != "":
-			var base_array: Array = [] if not base is Array else base as Array
-			var op_values: Array = (extra as Dictionary).get(op, []) as Array
-			if op == OP_MUL:
-				return _merge_array_by_index(base_array, op_values)
-			return _merge_array(base_array, op_values)
+		var list_op: ThingOperator = _list_operator(extra as Dictionary)
+		if list_op != null:
+			var items: Array = (extra as Dictionary).get(list_op.symbol(), []) as Array
+			return list_op.join(base as Array if base is Array else [], items)
 		if base is Dictionary:
 			return _merge_dict(base as Dictionary, extra as Dictionary)
 		return (extra as Dictionary).duplicate(true)
 	if extra is Array:
 		if base is Array:
-			return _merge_array(base as Array, extra as Array)
+			return _join(base as Array, extra as Array)
 		return (extra as Array).duplicate(true)
 	if extra is String:
-		var str_val: String = extra as String
-		if str_val.begins_with("="):
-			return str_val.substr(1)
-		var op_char: String = _operator_char(str_val)
-		if op_char != "":
-			var operand: String = str_val.substr(op_char.length())
-			return (_op_registry[op_char] as Callable).call(base, operand)
+		var text: String = extra as String
+		if text.begins_with(ESCAPE):
+			return text.substr(ESCAPE.length())
+		var op: ThingOperator = _operator_of(text)
+		if op != null:
+			return op.apply(base, text.substr(op.symbol().length()))
 	return extra
 
-static func merge(base: Variant, extra: Variant) -> Variant:
-	return _merge_value(base, extra)
+# The operation a text opens with: of the symbols it opens with that leave an
+# operand after them, the longest. Null if there is none.
+static func _operator_of(text: String) -> ThingOperator:
+	var best: String = ""
+	for symbol: String in _operators.keys():
+		if symbol.length() > best.length() and text.length() > symbol.length() and text.begins_with(symbol):
+			best = symbol
+	if best == "":
+		return null
+	return _operators[best]
+
+# A dictionary of one key, the symbol of an operation that takes lists, over
+# a list: {"+": [...]}. Null for any other dictionary.
+static func _list_operator(extra: Dictionary) -> ThingOperator:
+	if extra.size() != 1:
+		return null
+	var key: String = String(extra.keys()[0])
+	if not extra.get(key, null) is Array:
+		return null
+	var op: ThingOperator = operator(key)
+	if op == null or not op.handles_lists():
+		return null
+	return op
+
+static func _merge_dict(base: Dictionary, extra: Dictionary) -> Dictionary:
+	var merged: Dictionary = base.duplicate(true)
+	for key: Variant in extra.keys():
+		merged[key] = merge(merged.get(key, null), extra[key])
+	return merged
+
+static func _join(base: Array, items: Array) -> Array:
+	var joined: Array = []
+	joined.append_array(base)
+	joined.append_array(items)
+	return joined

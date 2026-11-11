@@ -126,7 +126,24 @@ func _set_managers() -> void:
 	pr.register_from_assets(am.list(pm.parsers_root()))
 	rm.register_from_assets(am.list(pm.loaders_root()))
 	vm.register_from_assets(am.list(pm.validators_root()))
+	_register_operators(rm, pm.operators_root())
 	dm.scan()
+
+# The operations of the merge, "+" and the others, are the scripts of their
+# folder (`operators` in engine.json): each a ThingOperator, registered by its
+# symbol before the Defs read their Things, which merge with them. Drive reads
+# the folder itself: a list through the AssetManager would replace the table
+# that `script_by_id` reads.
+func _register_operators(rm: ResourceManager, root: String) -> void:
+	var paths: Array[String] = []
+	_scan_files(root, "gd", paths)
+	for path: String in paths:
+		var script: Script = rm.load_resource(path) as Script
+		if script == null or not script.can_instantiate():
+			continue
+		var op: Object = script.new()
+		if op is ThingOperator:
+			ThingVariant.register_operator(op as ThingOperator)
 
 func _ready() -> void:
 	_set_managers()
