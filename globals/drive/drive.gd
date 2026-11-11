@@ -133,13 +133,14 @@ func _set_managers() -> void:
 # folder (`operators` in engine.json): each a ThingOperator, registered by its
 # symbol before the Defs read their Things, which merge with them. Drive reads
 # the folder itself: a list through the AssetManager would replace the table
-# that `script_by_id` reads.
+# that `script_by_id` reads. An abstract script is left unbuilt: it is there to be
+# extended.
 func _register_operators(rm: ResourceManager, root: String) -> void:
 	var paths: Array[String] = []
 	_scan_files(root, "gd", paths)
 	for path: String in paths:
 		var script: Script = rm.load_resource(path) as Script
-		if script == null or not script.can_instantiate():
+		if script == null or script.is_abstract():
 			continue
 		var op: Object = script.new()
 		if op is ThingOperator:

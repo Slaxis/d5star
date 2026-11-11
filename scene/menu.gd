@@ -1,6 +1,7 @@
 # Menu — full-screen UI scene. Player makes choices; transitions out
 # of the Flow via `go("transition_name")`. Subclasses build their UI
 # in their own _ready() and emit go() in response to input.
+@abstract
 class_name Menu
 extends Control
 

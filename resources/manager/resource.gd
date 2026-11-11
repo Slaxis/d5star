@@ -35,7 +35,8 @@ func register(ldr: Loader) -> void:
 
 # Discovery — same flow as ParserManager. Drive feeds the asset
 # list from PathManager.loaders_root(); each .gd whose script
-# extends `Loader` gets instantiated and registered.
+# extends `Loader` gets instantiated and registered, but an
+# abstract one, which is there to be extended.
 func register_from_assets(asset_list: Array[Asset]) -> void:
 	for asset in asset_list:
 		register_from_asset(asset)
@@ -44,7 +45,7 @@ func register_from_asset(asset: Asset) -> void:
 	if asset == null or asset.kind != "gd":
 		return
 	var script: Script = load(asset.path)
-	if script == null:
+	if script == null or script.is_abstract():
 		return
 	var instance: Object = script.new()
 	if instance is Loader:

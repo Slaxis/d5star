@@ -62,7 +62,8 @@ func scan() -> void:
 	_errors.clear()
 	_scan_defs(defs_root)
 
-# The provided Defs: each script of the folder whose instance is a Def.
+# The provided Defs: each script of the folder whose instance is a Def. An
+# abstract script is left unbuilt: it is there to be extended.
 func _scan_defs(root: String) -> void:
 	if root == "":
 		return
@@ -83,7 +84,7 @@ func _scan_defs(root: String) -> void:
 			continue
 		var script_path: String = root + "/" + entry
 		var script: GDScript = load(script_path) as GDScript
-		if script == null:
+		if script == null or script.is_abstract():
 			continue
 		var instance: Object = script.new()
 		if not instance is Def:

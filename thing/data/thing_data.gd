@@ -12,6 +12,7 @@
 # Pure RefCounted — never a Node. Materialising a Thing/ThingPart in
 # the scene tree is an upstream concern (H3X4X has `Piece` for
 # board-tile entities; game modules add concrete subclasses there).
+@abstract
 extends RefCounted
 class_name ThingData
 

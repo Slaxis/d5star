@@ -29,7 +29,7 @@ func register_from_asset(asset: Asset) -> void:
 	if asset == null or asset.kind != "gd":
 		return
 	var script: Script = load(asset.path)
-	if script == null:
+	if script == null or script.is_abstract():
 		return
 	var instance: Object = script.new()
 	if instance is Validator:

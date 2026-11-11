@@ -10,17 +10,16 @@
 #
 # Adding a new type = drop a new subclass here, declare its
 # extensions, return the typed resource. Zero touch on the D5Manager.
+@abstract
 class_name Loader
 extends RefCounted
 
 # File extensions this loader handles, lowercase, no leading dot
 # (e.g. `["png", "jpg"]`). One loader can claim several when the
 # underlying Godot resource type is the same.
-func extensions() -> Array[String]:
-	return []
+@abstract func extensions() -> Array[String]
 
 # Load the resource from a resolved path. Subclasses encapsulate
 # the Godot `load()` (or FileAccess) call here. Return null on
 # failure — ResourceManager logs and propagates.
-func load_resource(_path: String) -> Variant:
-	return null
+@abstract func load_resource(path: String) -> Variant

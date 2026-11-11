@@ -12,11 +12,11 @@
 #
 # Runs at end of every module switch — output goes to Log as warnings
 # so a broken ref doesn't fail boot but is impossible to miss.
+@abstract
 class_name Validator
 extends RefCounted
 
 # Return an array of issue messages (one per broken ref). Empty means
 # the check passed. The `hub` gives access to ThingCatalog queries;
 # Drive.list_all_content() gives the full raw JSON set.
-func validate(_hub: ThingHub) -> Array[String]:
-	return []
+@abstract func validate(hub: ThingHub) -> Array[String]

@@ -1,6 +1,7 @@
 # World — gameplay scene rooted in 2D world coordinates. Hosts the
 # board, the camera, the player's interaction with the simulation.
 # Transitions out of the Flow via `go("transition_name")`.
+@abstract
 class_name World
 extends Node2D
 

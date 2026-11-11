@@ -28,7 +28,7 @@ func _instantiate_parser(asset: Asset) -> Parser:
 	if asset.kind != "gd":
 		return null
 	var script: Script = load(asset.path)
-	if script == null:
+	if script == null or script.is_abstract():
 		return null
 	var instance: Object = script.new()
 	if instance is Parser:

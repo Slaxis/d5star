@@ -1,9 +1,10 @@
 # Base JSON parser: builds Resources via hooks and attribute injection.
+@abstract
 class_name Parser
 extends RefCounted
 
-func _create_resource() -> Resource:
-	return null
+# The Resource a parse fills: each parser makes its own.
+@abstract func _create_resource() -> Resource
 
 func _post_process(_resource: Resource, _data: Dictionary) -> void:
 	pass

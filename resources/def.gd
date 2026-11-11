@@ -13,6 +13,7 @@
 #
 # A Thing that names a Def that is no KindDef goes nowhere: an error, which
 # stops the boot.
+@abstract
 extends Resource
 class_name Def
 

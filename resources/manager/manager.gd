@@ -1,10 +1,10 @@
 # D5Manager: base class for all Drive managers.
+@abstract
 extends Resource
 class_name D5Manager
 
-func manager_id() -> String:
-	push_error("D5Manager.manager_id() not overridden in " + get_script().resource_path)
-	return ""
+# Its key in the Drive: each manager returns its own `ID`.
+@abstract func manager_id() -> String
 
 # The active module changed: its id, the content roots of it and of the
 # modules it requires, highest priority first, and its own folder. The
