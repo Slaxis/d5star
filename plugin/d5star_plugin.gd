@@ -3,6 +3,9 @@
 # project.godot. Enable the plugin once in Project Settings > Plugins and
 # Godot persists the entries; headless and exported builds need nothing.
 #
+# It lives in a folder of its own, `plugin/`, and `plugin.cfg`, which
+# Godot looks for at the root of the library, names it there.
+#
 # Order matters: Air (bus) and Log come first because Drive logs during
 # boot; God composes its hubs over Drive; The reads God.
 @tool
@@ -18,13 +21,15 @@ const _AUTOLOADS: Array = [
 	["Radio", "globals/radio.gd"],
 ]
 
-# Derived, never hardcoded — same rule Drive follows for the engine root,
-# so the folder can be named anything under res://addons/.
-func _root() -> String:
-	return get_script().resource_path.get_base_dir()
+# The root of the library, one folder above the plugin's own. Derived,
+# never hardcoded — same rule Drive follows for the engine root, so the
+# folder can be named anything under res://addons/. Static, so a test
+# can ask it: Godot builds an EditorPlugin only inside the editor.
+static func root_of(script_path: String) -> String:
+	return script_path.get_base_dir().get_base_dir()
 
 func _enable_plugin() -> void:
-	var root: String = _root()
+	var root: String = root_of((get_script() as Script).resource_path)
 	for entry: Array in _AUTOLOADS:
 		add_autoload_singleton(String(entry[0]), root + "/" + String(entry[1]))
 

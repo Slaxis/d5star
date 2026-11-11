@@ -31,7 +31,7 @@ git submodule update --init --recursive
 ```
 
 Abra o projeto no Godot e habilite **D5Star** em `Project Settings > Plugins`.
-O plugin registra os sete autoloads na ordem correta — o jogo nunca escreve
+O plugin, em `plugin/`, registra os sete autoloads na ordem correta — o jogo nunca escreve
 essas linhas no `project.godot` à mão:
 
 ```
@@ -144,7 +144,7 @@ ajuste o número de `get_base_dir()`:
 | Arquivo | Posição esperada | Deriva |
 |---|---|---|
 | `globals/drive/drive.gd` | `<raiz>/globals/drive/` | raiz da engine |
-| `d5star_plugin.gd` | `<raiz>/` | raiz do addon |
+| `plugin/d5star_plugin.gd` | `<raiz>/plugin/` | raiz do addon |
 
 Uma exceção: `game/game.tscn` referencia seu script por `uid://` (autoritativo,
 viaja com o addon) e, como fallback textual, pelo caminho canônico
