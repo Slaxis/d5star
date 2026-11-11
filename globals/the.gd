@@ -5,13 +5,31 @@
 # It keeps nothing of the module, so it has nothing to drop when the module
 # changes: the rules are God's (`God.rules.current()`) and so are the scenes
 # (`God.media.scene()`), cached by Drive's managers, which hear the change.
+#
+# Its session, the board and the Things, is its part of a saved match:
+# The hands it in when `God.saves` asks, and takes it back on load. The
+# saves never call The, which sits above them.
 # Layer: The -> God -> Drive.
 extends Node
+
+# The key of The's part among the parts of a saved match.
+const SAVE_KEY := "session"
 
 var board: Dictionary = {}
 
 func _ready() -> void:
-	pass
+	God.saves.save_requested.connect(_hand_in)
+	God.saves.load_completed.connect(_take_back)
+
+# The save asks for every part: The's is its snapshot.
+func _hand_in() -> void:
+	God.saves.add_extras(SAVE_KEY, snapshot())
+
+# The save is back: The takes its part, if the save has one.
+func _take_back(extras: Dictionary) -> void:
+	var part: Variant = extras.get(SAVE_KEY, {})
+	if part is Dictionary:
+		restore(part as Dictionary)
 
 func next_scene(packed: PackedScene) -> void:
 	if packed == null:

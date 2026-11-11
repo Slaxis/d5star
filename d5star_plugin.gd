@@ -1,4 +1,4 @@
-# D5Star editor plugin. Its only job is registering the engine's eight
+# D5Star editor plugin. Its only job is registering the engine's seven
 # autoloads in the right order, so a game never hand-writes them into
 # project.godot. Enable the plugin once in Project Settings > Plugins and
 # Godot persists the entries; headless and exported builds need nothing.
@@ -9,14 +9,13 @@
 extends EditorPlugin
 
 const _AUTOLOADS: Array = [
-	["Air",         "globals/air.gd"],
-	["Log",         "globals/log.gd"],
-	["Drive",       "globals/drive/drive.gd"],
-	["God",         "globals/god/god.gd"],
-	["The",         "globals/the.gd"],
-	["I18n",        "globals/i18n.gd"],
-	["SaveManager", "globals/save_manager.gd"],
-	["Audio",       "globals/audio_manager.gd"],
+	["Air",   "globals/air.gd"],
+	["Log",   "globals/log.gd"],
+	["Drive", "globals/drive/drive.gd"],
+	["God",   "globals/god/god.gd"],
+	["The",   "globals/the.gd"],
+	["I18n",  "globals/i18n.gd"],
+	["Radio", "globals/radio.gd"],
 ]
 
 # Derived, never hardcoded — same rule Drive follows for the engine root,

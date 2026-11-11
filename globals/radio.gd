@@ -1,5 +1,8 @@
-# CLAUDE: this class name is so boring
-# We should lorefy it better
+# Radio — the sound of the game: music, crossfaded between two players,
+# and sound effects, from a pool of eight. It plays what the game's
+# `audio` Def lists (`get_music`, `get_sfx`); with no such Def, it
+# stays quiet. The volume of each bus is a setting, kept and applied by
+# `God.saves`.
 extends Node
 
 const CROSSFADE_SECONDS: float = 0.8
