@@ -1,15 +1,19 @@
 # Thing — the main runtime abstraction. An entity in the game world,
 # resolved from a ThingType, holding data + a list of plugged-in
-# ThingParts, and dispatching messages through two buses:
+# ThingParts, and dispatching messages through three buses:
 #
 #   - `mind` (local Bus) — internal thoughts, heard by self and by
 #     its Parts only. Fired via `think(thought)`.
-#   - `Air` (world bus, autoload) — external broadcasts, heard by
-#     any subscriber in the world. Fired via `say(message)`.
+#   - `channel` (a group's Bus, optional) — what the Thing says,
+#     heard only by those tuned to the same channel, such as the
+#     other Things of one match. Fired via `say(message)`.
+#   - `Air` (world bus, autoload) — what a Thing on no channel
+#     says, heard by any subscriber in the world. Also `say`.
 #
-# One primitive (`Bus`) backs both scopes. Verbs follow the original
+# One primitive (`Bus`) backs every scope. Verbs follow the original
 # scrap-warriors design: `think` for cogitation, `say` for broadcast
-# — an explicit decision the Thing makes.
+# — an explicit decision the Thing makes. The mind thinks, the
+# channel talks, the air announces.
 #
 # Pure RefCounted, no Node. When something needs to be visible in
 # the scene tree, an upstream layer wraps a Thing in a Node-based
@@ -24,6 +28,10 @@ var thing_id: String = ""
 var ancestor: String = ""
 var parts: Array[ThingPart] = []
 var mind: Bus = null
+# The channel the Thing is tuned to. Whoever makes the channel, a
+# `Bus.new()`, sets it on each Thing of its group; `null`, the
+# default, sends `say` to `Air`. A clone comes without one.
+var channel: Bus = null
 
 func _init() -> void:
 	mind = Bus.new()
@@ -61,17 +69,23 @@ func think(thought: Cmd) -> void:
 	if mind != null:
 		mind.dispatch(thought)
 
-# Broadcast a message through the GLOBAL bus. Anyone subscribed to
-# Air receives it — world systems (log, achievements, HUD, replay)
-# hear it without knowing about this Thing. Say what you want the
-# world to hear; keep everything else inside `think`.
+# Say a message: on the Thing's channel when it is tuned to one, so
+# only its group hears it, or on the GLOBAL bus, `Air`, when it is
+# not — world systems (log, achievements, HUD, replay) hear it
+# without knowing about this Thing. Never both: whoever listens to
+# a channel relays to `Air` what the world needs. Say what you
+# want others to hear; keep everything else inside `think`.
 func say(message: Cmd) -> void:
-	Air.dispatch(message)
+	if channel != null:
+		channel.dispatch(message)
+	else:
+		Air.dispatch(message)
 
 # Shallow clone — used by the catalog's prototype pattern. Creates a
 # fresh Thing with the same id / ancestor / data; parts are NOT
 # copied (the assembler re-attaches a fresh set on the clone so each
-# instance owns its own behavior state).
+# instance owns its own behavior state), and neither is the
+# channel: whoever puts the clone in a group tunes it.
 func clone() -> Thing:
 	var copy: Thing = (get_script() as Script).new()
 	if copy == null:

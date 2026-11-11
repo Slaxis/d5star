@@ -3,7 +3,7 @@
 #
 # Parts are ThingParts (RefCounted) — wired via `part.attach(owner)`
 # which subscribes the part's `_on_thought` into the owner's
-# ThingAir. No scene tree involvement.
+# `mind`. No scene tree involvement.
 #
 # Parts only get assembled onto Things; if the resolved type isn't a
 # Thing (e.g. it's itself a Part being instantiated standalone for
