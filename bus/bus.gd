@@ -37,13 +37,3 @@ func dispatch(cmd: Cmd) -> void:
 	for fn in listeners:
 		if (fn as Callable).is_valid():
 			(fn as Callable).call(cmd)
-
-# Convenience: build a Cmd from a raw dict (`type` or `cmd` key
-# names the command, everything else becomes payload) and dispatch.
-func dispatch_raw(payload: Dictionary) -> void:
-	if payload.is_empty():
-		return
-	var cmd := Cmd.new()
-	cmd.type = StringName(String(payload.get("type", payload.get("cmd", ""))))
-	cmd.payload = payload
-	dispatch(cmd)

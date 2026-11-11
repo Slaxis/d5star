@@ -31,9 +31,6 @@ func unsubscribe(cmd_type: StringName, callback: Callable) -> void:
 func dispatch(cmd: Cmd) -> void:
 	_bus.dispatch(cmd)
 
-func dispatch_raw(payload: Dictionary) -> void:
-	_bus.dispatch_raw(payload)
-
 # Node-only: schedule dispatch for the next idle frame. Useful when
 # the caller is mid-signal-emit and wants to avoid re-entrancy or
 # deferred subscriber lookup.
