@@ -111,7 +111,8 @@ func get_content_roots(id: String) -> Array[String]:
 		roots.append(user_content)
 	if info != null and info.native_path != "":
 		var native_content: String = info.native_path + "/" + content_subdir
-		if DirAccess.open(native_content) != null:
+		# A module of the user, in a folder named by its id, is that same folder.
+		if not roots.has(native_content) and DirAccess.open(native_content) != null:
 			roots.append(native_content)
 	return roots
 

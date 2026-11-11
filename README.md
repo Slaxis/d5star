@@ -101,6 +101,31 @@ A lib não fornece Def nenhum. Os fluxos de telas são coisas com
 
 ---
 
+## Mods: o modelo do Caves of Qud
+
+A lib foi pensada para mods do jeito do Caves of Qud: "o usuario prove `<thing>.json`, `<thing>.png` e `<thing>.gd` e vc tem a injeção de nova funcionalidade", nas
+palavras do autor. Para cada coisa, um módulo traz até três arquivos com o id
+dela no nome, em qualquer pasta do seu `content/`:
+
+- `<id>.json`, os dados, sozinha ou numa lista de coisas;
+- `<id>.png`, a imagem;
+- `<id>.gd`, o comportamento: um script que estende `Thing`, ou `ThingPart`
+  para uma parte, sem `class_name`.
+
+`God.things.create(id)` monta a coisa a partir do script dela, com os dados.
+As pastas de conteúdo vêm da maior prioridade para a menor, então um mod que
+pede o jogo (`"requires"`) e traz um arquivo de mesmo nome toma o lugar do
+arquivo do jogo. Só o conteúdo dá script a uma coisa: um script do projeto
+fora dele não é de coisa nenhuma, qualquer que seja o nome. O
+`ScriptBindingValidator` avisa no boot quando um `<id>.gd` não é do tipo da
+coisa.
+
+Um mod de usuário mora em `user://modules/<id>/`, com `module.json` e
+`content/`. O script de um mod é código, e roda na máquina de quem instala o
+mod, como no Qud.
+
+---
+
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro

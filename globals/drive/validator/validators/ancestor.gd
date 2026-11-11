@@ -18,8 +18,9 @@ func validate(_hub: ThingHub) -> Array[String]:
 			continue
 		if known_ids.has(anc):
 			continue
-		# Ancestor might also be a Thing base script (asset-registered).
-		if Drive.script_by_id(anc, Drive.things_path()) != null:
+		# Ancestor might also be a script: a base of the library, or an
+		# `<id>.gd` of the content.
+		if Drive.script_by_id(anc) != null:
 			continue
 		issues.append(
 			"Thing '%s': ancestor '%s' not found (not a Thing id, not a base script)"

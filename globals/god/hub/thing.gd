@@ -48,24 +48,25 @@ func resolve_type(type_id: String) -> ThingType:
 
 # --- Script lookup (Thing-specific) ---
 #
-# Returns the GDScript backing a Thing type id ("card", "creature",
-# …). Note this is different from `God.media.script(class_name)`
-# which resolves a Godot class_name; ThingHub.script resolves a Thing
-# type id via the AssetManager scan of `things_path()`.
+# The script a Thing is born from, by its id: the `<id>.gd` of the content of
+# the active modules, a mod's before the game's (`Drive.script_by_id`). Not the
+# same as `God.media.script(class_name)`, which resolves a Godot class_name,
+# for a `"class"` field of the data.
 func script(script_id: String) -> Script:
-	return Drive.script_by_id(script_id, Drive.things_path())
+	return Drive.script_by_id(script_id)
 
 # --- Content lookup (Thing-specific) ---
 
-# Raw JSON payload for a Thing id, straight off disk.
+# A Thing as the active modules give it, with every key it was written with,
+# from a list or from a file of its own.
 func content(thing_id: String) -> Dictionary:
-	return Drive.read_content(Drive.content_path(thing_id))
+	return Drive.thing(thing_id)
 
-# Unified lookup: runtime-registered spec first, then disk JSON.
+# Unified lookup: runtime-registered spec first, then the modules' Thing.
 # Use this when displaying arbitrary Thing data that may have been
 # injected at runtime by a generator rather than shipped as a file.
 func data(thing_id: String) -> Dictionary:
 	var runtime: Dictionary = _catalog.get_runtime_spec(thing_id)
 	if not runtime.is_empty():
 		return runtime
-	return Drive.read_content(Drive.content_path(thing_id))
+	return Drive.thing(thing_id)

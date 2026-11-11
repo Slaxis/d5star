@@ -72,11 +72,10 @@ func _has_script(script_id: String) -> bool:
 # Order: explicit ancestor script → inherited from parent → self-id
 # auto-bind convention → base script for the kind.
 #
-# Self-id auto-bind: if a script exists with filename matching
-# `base.type_id` (via Drive's class registry lookup), instantiate
-# via that class. Enables the RimWorld/Qud-style "one script per
-# thing kind" pattern — a Thing with `"id": "faction"` binds to
-# `class_name Faction extends Thing` in `faction.gd`.
+# Self-id auto-bind: the `<id>.gd` of the content of the active modules
+# (`God.things.script`), the model of Caves of Qud — a Thing with
+# `"id": "lamp"` is born from the `lamp.gd` its module brings, a script
+# that extends Thing, and a mod's `lamp.gd` takes the place of the game's.
 func _resolve_script_id(base: ThingType, parent: ThingType) -> String:
 	if base == null:
 		return ""

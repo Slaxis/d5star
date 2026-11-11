@@ -16,7 +16,6 @@ var parsers_subpath: String = "globals/drive/parser/parsers"
 var loaders_subpath: String = "globals/drive/loader/loaders"
 var validators_subpath: String = "globals/drive/validator/validators"
 var operators_subpath: String = "thing/data/operators"
-var things_subpath: String = "thing/things"
 var thing_base_subpath: String = "thing/data/thing.gd"
 var thing_part_base_subpath: String = "thing/data/thing_part.gd"
 var scene_dir_id: String = "scene"
@@ -29,7 +28,6 @@ func configure(config: Dictionary) -> void:
 	loaders_subpath = String(config.get("loaders", loaders_subpath))
 	validators_subpath = String(config.get("validators", validators_subpath))
 	operators_subpath = String(config.get("operators", operators_subpath))
-	things_subpath = String(config.get("things", things_subpath))
 	thing_base_subpath = String(config.get("thing_base", thing_base_subpath))
 	thing_part_base_subpath = String(config.get("thing_part_base", thing_part_base_subpath))
 	scene_dir_id = String(config.get("scene_dir", scene_dir_id))
@@ -38,10 +36,21 @@ func configure(config: Dictionary) -> void:
 var _content_roots: Array[String] = []
 var _module_root: String = ""
 var _resolvers: Dictionary = {}
+# The files of each content root by their name, as a walk of the root meets
+# them first: the walk takes the entries in the order the folder lists them
+# and goes into a folder as soon as it meets it, as every lookup once walked
+# it. Made again when the module changes, so a file written into the content
+# after that is found from the next change on.
+var _files: Array[Dictionary] = []
 
 func set_module_roots(roots: Array[String], module_root: String) -> void:
 	_content_roots = roots.duplicate()
 	_module_root = module_root
+	_files.clear()
+	for root: String in _content_roots:
+		var found: Dictionary = {}
+		_index(root, found)
+		_files.append(found)
 
 # The module changed: its content roots and its folder are the ones to read.
 func on_module_changed(_module_id: String, content_roots: Array[String], module_root: String) -> void:
@@ -66,15 +75,15 @@ func _make_file_name(path: String, extension: String) -> String:
 		return path
 	return path + suffix
 
-func _find_file(root: String, target: String) -> String:
-	if root == "" or target == "":
-		return ""
+func _index(root: String, found: Dictionary) -> void:
+	if root == "":
+		return
 	var dir: DirAccess = DirAccess.open(root)
 	if dir == null:
 		var global_root: String = ProjectSettings.globalize_path(root)
 		dir = DirAccess.open(global_root)
 		if dir == null:
-			return ""
+			return
 		root = global_root
 	dir.list_dir_begin()
 	while true:
@@ -85,23 +94,21 @@ func _find_file(root: String, target: String) -> String:
 			continue
 		var entry_path: String = root + "/" + entry
 		if dir.current_is_dir():
-			var found: String = _find_file(entry_path, target)
-			if found != "":
-				dir.list_dir_end()
-				return found
+			_index(entry_path, found)
 			continue
-		if entry == target:
-			dir.list_dir_end()
-			return entry_path
+		if not found.has(entry):
+			found[entry] = entry_path
 	dir.list_dir_end()
-	return ""
 
+# A file of the content by its name: the active module's first, then the
+# modules it requires, so a mod's file takes the place of the game's.
 func _find_content_asset_multi(file_name: String, extension: String) -> String:
 	var target: String = _make_file_name(file_name, extension)
-	for root: String in _content_roots:
-		var found: String = _find_file(root, target)
-		if found != "":
-			return found
+	if target == "":
+		return ""
+	for found: Dictionary in _files:
+		if found.has(target):
+			return found[target]
 	return ""
 
 func parsers_root() -> String:
@@ -116,9 +123,6 @@ func validators_root() -> String:
 # The operations of the merge, one script each: ThingVariant's "+" and others.
 func operators_root() -> String:
 	return engine_root + "/" + operators_subpath
-
-func things_path() -> String:
-	return engine_root + "/" + things_subpath
 
 func thing_base_script() -> String:
 	return engine_root + "/" + thing_base_subpath

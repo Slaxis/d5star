@@ -11,6 +11,9 @@
 # that holds Things; with none, the Thing goes to a KindDef inferred for that
 # id, which lives while its module is active. A Thing with no way to its Def,
 # or of a Def that holds no Things, is an error, with its path: `errors()`.
+#
+# It keeps each Thing as it was written too, for the catalog, which builds a
+# Thing of a list as it builds one of a file of its own: `thing()`.
 extends D5Manager
 class_name DefManager
 
@@ -44,6 +47,7 @@ var _defs: Dictionary = {}
 var _base_json: Dictionary = {}
 var _inferred: Array[String] = []    # the KindDefs inferred for the active modules
 var _errors: Array[String] = []      # the Things the last activation could not place
+var _things: Dictionary = {}         # id -> the Thing as last read, every key with it
 
 func _read_json(path: String) -> Dictionary:
 	if path == "":
@@ -60,6 +64,7 @@ func scan() -> void:
 	_base_json.clear()
 	_inferred.clear()
 	_errors.clear()
+	_things.clear()
 	_scan_defs(defs_root)
 
 # The provided Defs: each script of the folder whose instance is a Def. An
@@ -157,6 +162,7 @@ func apply_module_overrides(content_roots: Array[String]) -> void:
 		_defs.erase(def_id)
 	_inferred.clear()
 	_errors.clear()
+	_things.clear()
 	for def_id: String in _scripts.keys():
 		_reset_def(def_id)
 	for def_id: String in _scripts.keys():
@@ -166,6 +172,14 @@ func apply_module_overrides(content_roots: Array[String]) -> void:
 # What the last activation could not place, one line each, with its path.
 func errors() -> Array[String]:
 	return _errors.duplicate()
+
+# A Thing of the active modules as it was written, with the keys that place
+# it: the last read of its id, which is the module's of highest priority, so
+# the catalog builds a Thing of a list as it builds one of a file of its own.
+# A copy, empty when no module has the id.
+func thing(thing_id: String) -> Dictionary:
+	var raw: Variant = _things.get(_key(thing_id), null)
+	return (raw as Dictionary).duplicate(true) if raw is Dictionary else {}
 
 # ─── Reading the Things ───────────────────────────────────────────
 
@@ -249,6 +263,7 @@ func _place(found: Array[Dictionary]) -> void:
 		if not by_id.has(id):
 			by_id[id] = []
 		(by_id[id] as Array).append(entry)
+		_things[id] = entry["thing"]
 	var placed: int = 0
 	for entry: Dictionary in found:
 		var def_id: String = _def_of(entry, by_id, [])

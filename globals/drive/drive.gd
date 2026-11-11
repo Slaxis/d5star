@@ -240,6 +240,15 @@ func def_errors() -> Array[String]:
 		return []
 	return dm.errors()
 
+# A Thing of the active modules as it was written, every key with it, from a
+# list or from a file of its own: the last read of its id, which is the
+# module's of highest priority. Empty when no module has it.
+func thing(thing_id: String) -> Dictionary:
+	var dm: DefManager = _m(DefManager.ID) as DefManager
+	if dm == null:
+		return {}
+	return dm.thing(thing_id)
+
 # --- Path API ---
 
 func _all_content_roots() -> Array[String]:
@@ -253,12 +262,6 @@ func content_path(asset_id: String, extension: String = "json") -> String:
 	if pm == null:
 		return ""
 	return pm.content_path(asset_id, extension)
-
-func things_path() -> String:
-	var pm: PathManager = _m(PathManager.ID) as PathManager
-	if pm == null:
-		return ""
-	return pm.things_path()
 
 func thing_base_script() -> String:
 	var pm: PathManager = _m(PathManager.ID) as PathManager
@@ -321,46 +324,30 @@ func script(class_name_str: String) -> Script:
 		return null
 	return rm.load_resource(path) as Script
 
-# Thing-script lookup by short id (e.g. "card", "creature", "faction").
-# Resolution order:
-#   1. "thing" / "thing_part" — engine base scripts (hardcoded path)
-#   2. AssetManager scan of `things_asset_root` — for engine-owned
-#      Thing scripts under `things_path()`
-#   3. Project class registry by filename — enables the "filename ==
-#      thing id → auto-bind" convention for game/module-layer scripts
-#      that live outside the engine's scan (e.g. `game/defs/faction.gd`
-#      binding to id "faction"). Any registered class_name whose file
-#      basename matches the id is a candidate; validators enforce that
-#      the script actually extends Thing/ThingPart.
-func script_by_id(id: String, things_asset_root: String = "") -> Script:
+# The script a Thing is born from, by the Thing's id. D5Star follows the model
+# of Caves of Qud: a module brings, for each Thing, its data, its image and its
+# behavior, three files named by its id, `<id>.json`, `<id>.png` and `<id>.gd`.
+# So the script of a Thing is the `<id>.gd` of the content of the active
+# modules, the highest priority first, and a mod's takes the place of the
+# game's. "thing" and "thing_part" are the library's bases. No other script
+# of the project is a Thing's, whatever its name. Null when the Thing has no
+# script of its own: the catalog then gives it the base of its kind.
+func script_by_id(id: String) -> Script:
 	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
-	var am: AssetManager = _m(AssetManager.ID) as AssetManager
-	if rm == null or am == null:
+	var pm: PathManager = _m(PathManager.ID) as PathManager
+	if rm == null or pm == null:
 		return null
 	var key: String = String(id).strip_edges().to_lower()
-	if key == "":
-		return null
+	var path: String = ""
 	if key == "thing":
-		var base_path: String = thing_base_script()
-		if base_path == "":
-			return null
-		return rm.load_resource(base_path) as Script
-	if key == "thing_part":
-		var pm: PathManager = _m(PathManager.ID) as PathManager
-		if pm == null:
-			return null
-		return rm.load_resource(pm.thing_part_base_script()) as Script
-	var asset: Asset = am.lookup(key)
-	if asset == null and things_asset_root != "":
-		am.list(things_asset_root)
-		asset = am.lookup(key)
-	if asset != null:
-		return rm.load_resource(asset.path) as Script
-	# Fallback: project class registry, filename convention.
-	var by_filename: String = rm.resolve_class_by_filename(key)
-	if by_filename == "":
+		path = pm.thing_base_script()
+	elif key == "thing_part":
+		path = pm.thing_part_base_script()
+	elif key != "":
+		path = pm.content_path(key, "gd")
+	if path == "":
 		return null
-	return rm.load_resource(by_filename) as Script
+	return rm.load_resource(path) as Script
 
 func json(asset_id: String) -> Dictionary:
 	var rm: ResourceManager = _m(ResourceManager.ID) as ResourceManager
