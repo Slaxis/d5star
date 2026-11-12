@@ -3,8 +3,9 @@
 # and Thing-specific content lookup. One of the three Hubs that compose
 # God; see god.gd for the coordinator.
 #
-# Module-scoped state: the only Hub that keeps something of the module,
-# so the only one that overrides `D5Hub.on_module_changed`.
+# Module-scoped state: it keeps the catalog of the module, so it overrides
+# `D5Hub.on_module_changed`, and hears the change first, before MediaHub,
+# which builds its chromas and palettes from the catalog.
 extends D5Hub
 class_name ThingHub
 

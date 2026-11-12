@@ -3,7 +3,8 @@
 #
 #   God.things  — ThingHub: Thing system (catalog, lifecycle, content)
 #   God.rules   — RuleHub:  active Codex resource + future rule queries
-#   God.media   — MediaHub: typed media facade (texture/shader/sound/scene/script/json)
+#   God.media   — MediaHub: typed media (texture/shader/sound/scene/script/json)
+#                 and the painted sprites (paint/chroma/palette)
 #   God.saves   — SaveHub:  the player's files (saved match, hall of fame, settings)
 #
 # Game code calls God.<hub>.<method>; God itself holds no domain

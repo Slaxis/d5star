@@ -87,6 +87,10 @@ default, então um projeto novo boota sem criar o arquivo.
 `engine_root` não é configurável: o `Drive` deriva a raiz da própria
 localização do script, então a lib funciona de qualquer pasta.
 
+O `d5star.json` também guarda o que é do jogo e não de um módulo, como a chroma
+do jogo, `"chroma": "two_tone"` (veja *As cores dos sprites*, abaixo). O código
+lê uma chave com `Drive.setting(chave, padrão)`.
+
 Toda coisa embaixo de `content/things/` de um módulo diz o Def dela,
 `"def": "<id>"`, nela ou no ancestral dela, e a pasta onde ela está não conta.
 Um Def fornecido, um script do jogo com aquele id em `game/defs/`, recebe a
@@ -124,30 +128,80 @@ Um mod de usuário mora em `user://modules/<id>/`, com `module.json` e
 `content/`. O script de um mod é código, e roda na máquina de quem instala o
 mod, como no Qud.
 
+O `<id>.png` de um mod de usuário fica numa pasta que o Godot não importa, e o
+Godot 4 não carrega imagem que não importou: o `TextureLoader` lê essa imagem
+como arquivo, e `God.media.texture(id)` a devolve como devolve a do jogo.
+
+---
+
+## As cores dos sprites: chroma e paleta
+
+A lib serve a jogos que recolorem os sprites de jeitos diferentes: um com um tom
+só, outro com quatro, outro com oito para um artista dedicado, com nomes como
+`main`, `mid` e `hi` num jogo e `foreground` e `background` noutro. Por isso a
+lib não sabe nenhuma cor: o jogo diz quais são, como dado (J141).
+
+- Uma **chroma** diz com que cores-chave um jogo desenha os seus sprites:
+  quantas, o nome de cada uma e o RGB.
+- Pintar troca cada chave pela cor do nome dela. O pixel que não é chave fica
+  como foi desenhado.
+- Uma **paleta** é uma lista de cores com nome.
+  - Uma chroma que aponta para uma paleta só aceita as cores dela, o jeito do
+    Caves of Qud. Uma cor fora dela sai como erro no log, e pinta mesmo assim.
+  - Uma chroma pode tirar as suas chaves de uma paleta. Pintar com outra paleta
+    troca as chaves pela posição, como o modo indexed do Aseprite.
+- O sprite diz qual chroma usa num campo `chroma`, dele ou do seu `ancestor`.
+  Sem esse campo, vale a chroma do jogo, a que o `d5star.json` nomeia. Um jogo
+  sem chroma pinta a imagem como foi desenhada.
+
+```json
+{ "id": "two_tone", "def": "chromas", "keys": { "main": "#ffffff", "second": "#808080" } }
+{ "id": "qud", "def": "chromas", "keys": { "foreground": "#000000", "detail": "#ffffff" }, "palette": "qud_colors" }
+{ "id": "nes", "def": "chromas", "keys": "nes_day" }
+{ "id": "nes_day", "def": "palettes", "colors": { "sky": "#5c94fc", "brick": "#c84c0c" } }
+```
+
+```gdscript
+God.media.paint("star", { "main": cor, "second": cor })   # a textura, guardada até o módulo mudar
+God.media.paint("mario", "nes_night")                       # as cores de outra paleta, pela posição
+God.media.painted("star", { "main": cor })                  # a imagem, nova, para montar com outras
+God.media.chroma_of("star")                                 # a chroma do sprite, ou null
+```
+
+A chroma e a paleta são coisas do jogo, no tipo que ele quiser (`chromas` e
+`palettes` acima). Cada uma nasce da classe da lib, `Chroma` ou `Palette`, ou do
+`<id>.gd` de um módulo que a estende: um mod que traz `two_tone.gd` com
+`extends Chroma` pinta do jeito dele, reescrevendo `paint`. Um mod troca a chroma
+do jogo trazendo uma de mesmo id. Qualquer outra chave da chroma é do jogo, como
+uma cor de contorno que só ele lê.
+
+Por ora a lib pinta na CPU, uma vez por sprite e cores, e guarda o resultado. A
+API já serve para um shader, que pode vir quando um jogo recolorir a cada quadro.
+
 ---
 
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 57 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 59 nomes
 colide com a engine:
 
 ```
-AddOperator       AncestorValidator   Asset                    AssetManager
-Bus               ClassRefValidator   Cmd                      Codex
-D5                D5Hub               D5Manager                Def
-DefManager        Directories         DirectoriesParser        DivideOperator
-Flow              Game                JsonLoader               KindDef
-Loader            MediaHub            Menu                     ModuleInfo
-ModuleManager     MultiplyOperator    Overlay                  Parser
-ParserManager     PartsValidator      PathManager              Record
-ResourceManager   RuleHub             RulesParser              SaveHub
-SceneFlow         SceneLoader         ScriptBindingValidator   ScriptLoader
-SeedRng           ShaderLoader        SoundLoader              SubtractOperator
-TextureLoader     Thing               ThingAssembler           ThingCatalog
-ThingData         ThingHub            ThingOperator            ThingPart
-ThingType         ThingVariant        Validator                ValidatorManager
-World
+AddOperator             AncestorValidator  Asset              AssetManager
+Bus                     Chroma             ClassRefValidator  Cmd
+Codex                   D5                 D5Hub              D5Manager
+Def                     DefManager         Directories        DirectoriesParser
+DivideOperator          Flow               Game               JsonLoader
+KindDef                 Loader             MediaHub           Menu
+ModuleInfo              ModuleManager      MultiplyOperator   Overlay
+Palette                 Parser             ParserManager      PartsValidator
+PathManager             Record             ResourceManager    RuleHub
+RulesParser             SaveHub            SceneFlow          SceneLoader
+ScriptBindingValidator  ScriptLoader       SeedRng            ShaderLoader
+SoundLoader             SubtractOperator   TextureLoader      Thing
+ThingAssembler          ThingCatalog       ThingData          ThingHub
+ThingOperator           ThingPart          ThingType          ThingVariant
+Validator               ValidatorManager   World
 ```
 
 Três nomes já foram cedidos aos jogos de propósito, porque eram genéricos

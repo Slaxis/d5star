@@ -18,6 +18,7 @@ const PROJECT_CONFIG := "res://d5star.json"
 signal active_module_changed(module_id: String)
 
 var _managers: Dictionary = {}  # manager_id -> D5Manager
+var _config: Dictionary = {}    # engine.json, with the game's d5star.json over it
 
 # --- Bootstrap (only for engine config — ResourceManager isn't alive yet) ---
 
@@ -103,6 +104,7 @@ func _set_managers() -> void:
 	if not _managers.is_empty():
 		return
 	var config: Dictionary = _load_engine_config()
+	_config = config
 	_register(ParserManager.new())
 	_register(ResourceManager.new())
 	_register(ValidatorManager.new())
@@ -159,6 +161,14 @@ func _hear_the_module(mm: ModuleManager) -> void:
 			mm.module_changed.connect(mgr.on_module_changed)
 	mm.module_changed.connect(func(module_id: String, _content_roots: Array[String], _module_root: String) -> void:
 		active_module_changed.emit(module_id))
+
+# --- Settings ---
+
+# A key of the configuration, the game's `d5star.json` over the library's
+# `engine.json`, such as `chroma`, the game's chroma; `default` when neither
+# has it.
+func setting(key: String, default: Variant = null) -> Variant:
+	return _config.get(key, default)
 
 # --- Module API: the ModuleManager's, passed through ---
 
