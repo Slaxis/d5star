@@ -25,5 +25,13 @@ func load_data(_raw: Dictionary) -> void:
 func merge_data(raw: Dictionary) -> void:
 	load_data(raw)
 
+# What this Def finds wrong in itself, one line each; empty when all is well.
+# `fields` are the fields the modules declare as names of other Things, in the
+# Thing of the def `refs` with this Def's id (see Refs). A KindDef checks its
+# Things by them; a Def of data overrides this to check its data, and any rule
+# of its own. RefsValidator asks every Def at each module switch.
+func issues(_fields: Dictionary) -> Array[String]:
+	return []
+
 func _key(value: String) -> String:
 	return String(value).strip_edges().to_lower()

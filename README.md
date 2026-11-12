@@ -180,28 +180,65 @@ API já serve para um shader, que pode vir quando um jogo recolorir a cada quadr
 
 ---
 
+## Referências: um id que não aponta para nada
+
+Um jogo nomeia coisas pelo id em toda parte: o elemento de um mutante, os
+biomas onde ele vive, o regime de uma origem política. A lib não sabe quais
+campos de um jogo guardam ids, então o jogo diz, como dado, numa coisa do tipo
+`refs` para cada tipo dele, com o id do tipo de que fala:
+
+```json
+{ "id": "mutants", "def": "refs", "fields": {
+    "element": "elements",
+    "habitat[]": "biomes",
+    "stats{}": "stats",
+    "res": { "def": "elements", "also": ["luxury"] } } }
+{ "id": "bots", "def": "refs", "fields": { "plays[]": "class" } }
+```
+
+- Um caminho desce pelas chaves de um dicionário, `battle.hit.stat`. `[]` lê
+  cada item de uma lista, `{}` cada chave de um dicionário, e `*` cada valor:
+  `battle.*.stat`, `marks.*`, `start.*{}`.
+- Um campo que não está lá, ou que tem `""` ou `null`, não nomeia nada.
+  Qualquer outro valor tem que ser o id de uma coisa do tipo que o campo nomeia,
+  um dos nomes do `also`, ou, com `class`, um `class_name` do projeto.
+- A cada troca de módulo, o `RefsValidator` confere tudo e avisa no log com
+  `[CrossRef]`, sem parar o boot:
+  `[CrossRef] Thing 'metallic' (mutants): element 'scrapp' is no Thing of elements`.
+  Avisa também a declaração de um tipo que não existe, o campo que nomeia um
+  tipo sem coisas, e o campo declarado que nenhuma coisa tem, quase sempre um
+  erro na própria declaração.
+- Um `KindDef` confere as coisas dele. Um Def que guarda dados, como as regras
+  de um jogo, se confere reescrevendo `issues(fields)`: `Refs.check` sobre os
+  dados, e as regras que só ele conhece.
+- Um mod traz as declarações dos tipos dele, e troca a de um tipo do jogo
+  trazendo uma de mesmo id, como troca qualquer coisa.
+
+---
+
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 59 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 61 nomes
 colide com a engine:
 
 ```
-AddOperator             AncestorValidator  Asset              AssetManager
-Bus                     Chroma             ClassRefValidator  Cmd
-Codex                   D5                 D5Hub              D5Manager
-Def                     DefManager         Directories        DirectoriesParser
-DivideOperator          Flow               Game               JsonLoader
-KindDef                 Loader             MediaHub           Menu
-ModuleInfo              ModuleManager      MultiplyOperator   Overlay
-Palette                 Parser             ParserManager      PartsValidator
-PathManager             Record             ResourceManager    RuleHub
-RulesParser             SaveHub            SceneFlow          SceneLoader
-ScriptBindingValidator  ScriptLoader       SeedRng            ShaderLoader
-SoundLoader             SubtractOperator   TextureLoader      Thing
-ThingAssembler          ThingCatalog       ThingData          ThingHub
-ThingOperator           ThingPart          ThingType          ThingVariant
-Validator               ValidatorManager   World
+AddOperator      AncestorValidator  Asset                   AssetManager
+Bus              Chroma             ClassRefValidator       Cmd
+Codex            D5                 D5Hub                   D5Manager
+Def              DefManager         Directories             DirectoriesParser
+DivideOperator   Flow               Game                    JsonLoader
+KindDef          Loader             MediaHub                Menu
+ModuleInfo       ModuleManager      MultiplyOperator        Overlay
+Palette          Parser             ParserManager           PartsValidator
+PathManager      Record             Refs                    RefsValidator
+ResourceManager  RuleHub            RulesParser             SaveHub
+SceneFlow        SceneLoader        ScriptBindingValidator  ScriptLoader
+SeedRng          ShaderLoader       SoundLoader             SubtractOperator
+TextureLoader    Thing              ThingAssembler          ThingCatalog
+ThingData        ThingHub           ThingOperator           ThingPart
+ThingType        ThingVariant       Validator               ValidatorManager
+World
 ```
 
 Três nomes já foram cedidos aos jogos de propósito, porque eram genéricos

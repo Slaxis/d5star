@@ -5,10 +5,10 @@
 # ValidatorManager auto-discovers validators from the loaders-style
 # folder at boot; adding a new check = drop a new subclass here.
 #
-# Validators are engine-level for the MVP: they know about `ancestor`,
-# `parts`, and `class` fields. Game-specific validation (class_affinity,
-# biome refs, etc.) is a future extension via module-supplied
-# validators.
+# The validators of the library know `ancestor`, `parts`, `class` and the
+# script of each Thing. The fields a game's Things use to name other Things,
+# a biome, a stat, a class, the game declares in data, Things of the def
+# `refs`, and RefsValidator checks them (see Refs).
 #
 # Runs at end of every module switch — output goes to Log as warnings
 # so a broken ref doesn't fail boot but is impossible to miss.

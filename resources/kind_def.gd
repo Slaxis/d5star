@@ -29,6 +29,24 @@ func ids() -> Array[String]:
 func get_thing(id: String) -> Dictionary:
 	return _things.get(id, {})
 
+# The ids its Things name that point to nothing, by the fields the modules
+# declare for this def (see Refs), one line each with the Thing; and a declared
+# field that none of its Things has, more often a typo in the declaration than
+# a field nobody fills.
+func issues(fields: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if fields.is_empty():
+		return out
+	var known: Dictionary = {}
+	var reached: Dictionary = {}
+	for id: String in ids():
+		for line: String in Refs.check(_things[id], fields, known, reached):
+			out.append("Thing '%s' (%s): %s" % [id, def_id, line])
+	for path: String in fields:
+		if reached.has(path) and int(reached[path]) == 0:
+			out.append("refs '%s': no Thing of %s has %s" % [def_id, def_id, path])
+	return out
+
 # The table a game reads: id -> row, in order. `renamed` maps a field of the
 # Things to the name the game reads it by, Thing field -> table field, for a
 # game that spells a field differently from its Things.
