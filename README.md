@@ -106,6 +106,17 @@ e o `Game` não sobe: uma coisa com `"def": "rules"`, por exemplo, já que o
 A lib não fornece Def nenhum. Os fluxos de telas são coisas com
 `"def": "flow"`, e o `Game` pega deles o fluxo que as regras nomeiam.
 
+Uma coisa carrega partes como os blueprints do Caves of Qud (v0.13.0): ela
+as nomeia em `"parts": [...]`, e cada parte é uma coisa com `"kind": "part"`,
+com o seu def, em qualquer pasta, de preferência na do seu contexto,
+`things/economy/chem_reactor.json`. A parte dá os campos dela, no valor
+neutro, por baixo dos da coisa: a linha do `KindDef` tem todo campo que as
+partes dão, e a coisa escreve só o que difere. Um herdeiro soma as partes dele
+às do ancestral, e de duas partes com o mesmo campo vale a nomeada por último.
+Uma parte que não é coisa de kind part é erro, com o caminho. A mesma parte
+serve a qualquer tipo: o prédio que consome chem é um `chem_reactor`, e uma
+parte de um scrapper pode ser outro.
+
 ---
 
 ## Mods: o modelo do Caves of Qud

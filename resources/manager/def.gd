@@ -14,6 +14,11 @@
 #
 # It keeps each Thing as it was written too, for the catalog, which builds a
 # Thing of a list as it builds one of a file of its own: `thing()`.
+#
+# A Thing carries parts as Caves of Qud's blueprints do: it names them in
+# `parts`, and each part, a Thing of kind part wherever its file sits, gives
+# its data under the Thing's own, so the Thing writes only what differs from
+# the part (v0.13.0). A heir joins its parts to its ancestor's.
 extends D5Manager
 class_name DefManager
 
@@ -26,6 +31,10 @@ const KEY_ID := "id"
 const KEY_DEF := "def"
 const KEY_ANCESTOR := "ancestor"
 const KEY_ABSTRACT := "abstract"
+# The keys of the parts a Thing carries, which stay in its data.
+const KEY_PARTS := "parts"
+const KEY_KIND := "kind"
+const KIND_PART := "part"
 
 func manager_id() -> String: return ID
 
@@ -280,6 +289,7 @@ func _place(found: Array[Dictionary]) -> void:
 		var data: Variant = _data_of(entry, def_id, by_id, [])
 		if data == null:
 			continue
+		data = _with_parts(data as Dictionary, by_id, entry)
 		var kind: KindDef = def as KindDef
 		if kind == null:
 			kind = KindDef.new()
@@ -361,6 +371,39 @@ func _data_of(entry: Dictionary, def_id: String, by_id: Dictionary, chain: Array
 				data = ThingVariant.merge(inherited, own)
 	entry["data"] = data
 	return data
+
+# A Thing's data with its parts' under it: each part the Thing names in
+# `parts`, its own and its ancestors', is the last Thing read with that id whose
+# kind is part, and gives each field of its data, its own `kind` and `parts`
+# aside, that the Thing does not write; of two parts with a field, the one named
+# last gives it. A part that is not there is an error, with the Thing's path.
+func _with_parts(data: Dictionary, by_id: Dictionary, entry: Dictionary) -> Dictionary:
+	var named: Variant = data.get(KEY_PARTS, [])
+	if not named is Array or (named as Array).is_empty():
+		return data
+	var under: Dictionary = {}
+	for part: Variant in named:
+		var part_id: String = _key(String(part))
+		var found: Dictionary = {}
+		for other: Dictionary in by_id.get(part_id, []):
+			if String(other["thing"].get(KEY_KIND, "")).strip_edges().to_lower() == KIND_PART:
+				found = other
+		if found.is_empty():
+			_error(entry["path"], "'%s' names the part '%s', and no Thing of kind part is '%s'" % [
+				_key(String(entry["thing"][KEY_ID])), part_id, part_id])
+			continue
+		var given: Variant = _data_of(found, _def_of(found, by_id, []), by_id, [])
+		if given is Dictionary:
+			var copy: Dictionary = (given as Dictionary).duplicate(true)
+			copy.erase(KEY_KIND)
+			copy.erase(KEY_PARTS)
+			under.merge(copy, true)
+	var out: Dictionary = {}
+	for key: Variant in under:
+		if not data.has(key):
+			out[key] = under[key]
+	out.merge(data, true)
+	return out
 
 func _error(path: String, message: String) -> void:
 	var line: String = "%s: %s" % [path, message]
