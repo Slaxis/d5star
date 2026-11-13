@@ -8,7 +8,7 @@
 # The validators of the library know `ancestor`, `parts`, `class` and the
 # script of each Thing. The fields a game's Things use to name other Things,
 # a biome, a stat, a class, the game declares in data, Things of the def
-# `refs`, and RefsValidator checks them (see Refs).
+# `ref`, and RefsValidator checks them (see Refs).
 #
 # Runs at end of every module switch — output goes to Log as warnings
 # so a broken ref doesn't fail boot but is impossible to miss.

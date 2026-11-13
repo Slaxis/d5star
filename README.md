@@ -93,6 +93,9 @@ lê uma chave com `Drive.setting(chave, padrão)`.
 
 Toda coisa embaixo de `content/things/` de um módulo diz o Def dela,
 `"def": "<id>"`, nela ou no ancestral dela, e a pasta onde ela está não conta.
+O Def é o tipo da coisa, então se escreve no singular, `"def": "biome"`,
+como o `ref` da lib; o arquivo e a pasta, que guardam muitas, podem ficar no
+plural, `things/biomes/biomes.json`.
 Um Def fornecido, um script do jogo com aquele id em `game/defs/`, recebe a
 coisa se for um `KindDef`, o único Def que guarda coisas; sem script, a lib
 infere um `KindDef`, uma tabela, que vive enquanto o módulo está ativo.
@@ -155,10 +158,10 @@ lib não sabe nenhuma cor: o jogo diz quais são, como dado (J141).
   sem chroma pinta a imagem como foi desenhada.
 
 ```json
-{ "id": "two_tone", "def": "chromas", "keys": { "main": "#ffffff", "second": "#808080" } }
-{ "id": "qud", "def": "chromas", "keys": { "foreground": "#000000", "detail": "#ffffff" }, "palette": "qud_colors" }
-{ "id": "nes", "def": "chromas", "keys": "nes_day" }
-{ "id": "nes_day", "def": "palettes", "colors": { "sky": "#5c94fc", "brick": "#c84c0c" } }
+{ "id": "two_tone", "def": "chroma", "keys": { "main": "#ffffff", "second": "#808080" } }
+{ "id": "qud", "def": "chroma", "keys": { "foreground": "#000000", "detail": "#ffffff" }, "palette": "qud_colors" }
+{ "id": "nes", "def": "chroma", "keys": "nes_day" }
+{ "id": "nes_day", "def": "palette", "colors": { "sky": "#5c94fc", "brick": "#c84c0c" } }
 ```
 
 ```gdscript
@@ -168,8 +171,8 @@ God.media.painted("star", { "main": cor })                  # a imagem, nova, pa
 God.media.chroma_of("star")                                 # a chroma do sprite, ou null
 ```
 
-A chroma e a paleta são coisas do jogo, no tipo que ele quiser (`chromas` e
-`palettes` acima). Cada uma nasce da classe da lib, `Chroma` ou `Palette`, ou do
+A chroma e a paleta são coisas do jogo, no tipo que ele quiser (`chroma` e
+`palette` acima). Cada uma nasce da classe da lib, `Chroma` ou `Palette`, ou do
 `<id>.gd` de um módulo que a estende: um mod que traz `two_tone.gd` com
 `extends Chroma` pinta do jeito dele, reescrevendo `paint`. Um mod troca a chroma
 do jogo trazendo uma de mesmo id. Qualquer outra chave da chroma é do jogo, como
@@ -185,15 +188,15 @@ API já serve para um shader, que pode vir quando um jogo recolorir a cada quadr
 Um jogo nomeia coisas pelo id em toda parte: o elemento de um mutante, os
 biomas onde ele vive, o regime de uma origem política. A lib não sabe quais
 campos de um jogo guardam ids, então o jogo diz, como dado, numa coisa do tipo
-`refs` para cada tipo dele, com o id do tipo de que fala:
+`ref` para cada tipo dele, com o id do tipo de que fala:
 
 ```json
-{ "id": "mutants", "def": "refs", "fields": {
-    "element": "elements",
-    "habitat[]": "biomes",
-    "stats{}": "stats",
-    "res": { "def": "elements", "also": ["luxury"] } } }
-{ "id": "bots", "def": "refs", "fields": { "plays[]": "class" } }
+{ "id": "mutant", "def": "ref", "fields": {
+    "element": "element",
+    "habitat[]": "biome",
+    "stats{}": "stat",
+    "res": { "def": "element", "also": ["luxury"] } } }
+{ "id": "bot", "def": "ref", "fields": { "plays[]": "class" } }
 ```
 
 - Um caminho desce pelas chaves de um dicionário, `battle.hit.stat`. `[]` lê
@@ -204,7 +207,7 @@ campos de um jogo guardam ids, então o jogo diz, como dado, numa coisa do tipo
   um dos nomes do `also`, ou, com `class`, um `class_name` do projeto.
 - A cada troca de módulo, o `RefsValidator` confere tudo e avisa no log com
   `[CrossRef]`, sem parar o boot:
-  `[CrossRef] Thing 'metallic' (mutants): element 'scrapp' is no Thing of elements`.
+  `[CrossRef] Thing 'metallic' (mutant): element 'scrapp' is no element`.
   Avisa também a declaração de um tipo que não existe, o campo que nomeia um
   tipo sem coisas, e o campo declarado que nenhuma coisa tem, quase sempre um
   erro na própria declaração.

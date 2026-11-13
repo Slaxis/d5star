@@ -6,7 +6,7 @@
 #
 # A chroma is a Thing of the game, in the list of whatever kind the game names:
 #
-#   { "id": "two_tone", "def": "chromas", "keys": { "main": "#ffffff", "second": "#808080" } }
+#   { "id": "two_tone", "def": "chroma", "keys": { "main": "#ffffff", "second": "#808080" } }
 #
 # Its keys may come from a palette instead, `"keys": "nes_day"`, in the order of
 # the palette, and painting with another palette then swaps them by position, as

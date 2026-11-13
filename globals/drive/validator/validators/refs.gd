@@ -1,6 +1,6 @@
 # RefsValidator: every id that a module's Things and Defs name points to a Thing
 # of the def its field names, as the modules declare their fields in the Things
-# of the def `refs` (see Refs). It reads the declarations and says what they
+# of the def `ref` (see Refs). It reads the declarations and says what they
 # name that does not exist, then asks every Def what it finds wrong in itself:
 # a KindDef in its Things, a Def of data, such as a game's rules, in its data.
 #
@@ -17,18 +17,18 @@ func validate(_hub: ThingHub) -> Array[String]:
 		for def_id: String in refs.ids():
 			var fields: Variant = refs.get_thing(def_id).get("fields", {})
 			if not fields is Dictionary:
-				issues.append("refs '%s': its fields are no dictionary" % def_id)
+				issues.append("ref '%s': its fields are no dictionary" % def_id)
 				continue
 			if Drive.def(def_id) == null:
-				issues.append("refs '%s': no def has that id" % def_id)
+				issues.append("ref '%s': no def has that id" % def_id)
 				continue
 			var good: Dictionary = {}
 			for path: String in fields:
 				var named: Dictionary = Refs.target(fields[path])
 				if named.is_empty():
-					issues.append("refs '%s': %s names no def" % [def_id, path])
+					issues.append("ref '%s': %s names no def" % [def_id, path])
 				elif named["def"] != Refs.CLASS and not Drive.def(named["def"]) is KindDef:
-					issues.append("refs '%s': %s names the def '%s', which holds no Things" % [
+					issues.append("ref '%s': %s names the def '%s', which holds no Things" % [
 						def_id, path, named["def"]])
 				else:
 					good[path] = fields[path]

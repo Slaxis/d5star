@@ -44,7 +44,7 @@ func issues(fields: Dictionary) -> Array[String]:
 			out.append("Thing '%s' (%s): %s" % [id, def_id, line])
 	for path: String in fields:
 		if reached.has(path) and int(reached[path]) == 0:
-			out.append("refs '%s': no Thing of %s has %s" % [def_id, def_id, path])
+			out.append("ref '%s': no %s has %s" % [def_id, def_id, path])
 	return out
 
 # The table a game reads: id -> row, in order. `renamed` maps a field of the

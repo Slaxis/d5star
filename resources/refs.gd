@@ -1,12 +1,12 @@
 # Refs: the fields that name other Things, as the modules declare them. A Thing
-# of the def `refs`, its id the def it speaks of, says which fields of that
+# of the def `ref`, its id the def it speaks of, says which fields of that
 # def's Things hold ids, and of what:
 #
-#     { "id": "mutants", "def": "refs", "fields": {
-#         "element": "elements",
-#         "habitat[]": "biomes",
-#         "stats{}": "stats",
-#         "res": { "def": "elements", "also": ["luxury"] } } }
+#     { "id": "mutant", "def": "ref", "fields": {
+#         "element": "element",
+#         "habitat[]": "biome",
+#         "stats{}": "stat",
+#         "res": { "def": "element", "also": ["luxury"] } } }
 #
 # A path goes down the keys of a dictionary, `battle.hit.stat`. A step may end
 # in `[]`, each item of a list, or in `{}`, each key of a dictionary, and `*` is
@@ -23,7 +23,7 @@
 class_name Refs
 extends RefCounted
 
-const DEF := "refs"      # the def of the declarations
+const DEF := "ref"       # the def of the declarations
 const CLASS := "class"   # the target of a field that names a class_name
 
 # The fields the active modules declare for `def_id`, path -> target; empty
@@ -106,8 +106,7 @@ static func check(data: Variant, fields: Dictionary, known: Dictionary, reached:
 			var id: String = String(value)
 			if id == "" or (named["also"] as Array).has(id) or (_ids(named["def"], known) as Dictionary).has(id):
 				continue
-			var what: String = "class" if named["def"] == CLASS else "Thing of " + String(named["def"])
-			out.append("%s '%s' is no %s" % [pair[0], id, what])
+			out.append("%s '%s' is no %s" % [pair[0], id, String(named["def"])])
 	return out
 
 # The ids of a def, as a set, kept in `known`: the class_names of the project

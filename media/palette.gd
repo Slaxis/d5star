@@ -1,6 +1,6 @@
 # Palette — a list of colours with names, in order:
 #
-#   { "id": "nes_day", "def": "palettes", "colors": { "sky": "#5c94fc", "brick": "#c84c0c" } }
+#   { "id": "nes_day", "def": "palette", "colors": { "sky": "#5c94fc", "brick": "#c84c0c" } }
 #
 # A chroma may take its keys from a palette, in its order, and painting with
 # another palette then swaps them by position, as the indexed mode of Aseprite
