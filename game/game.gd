@@ -1,18 +1,33 @@
-# Game entrypoint: activate the default module, stop if any of its Things has
-# no Def to hold it, load rules, hand the active Flow to a Flow runtime that
-# survives scene swaps.
+# Game entrypoint: activate the module the command line names, or the first one,
+# stop if any of its Things has no Def to hold it, load rules, hand the active
+# Flow to a Flow runtime that survives scene swaps.
 extends Node2D
 class_name Game
 
+const MODULE_ARG: String = "module="
+
 var _flow: Flow = null
+
+# The module to open: the one `-- module=<id>` names on the command line, or the
+# first by the `order` of its module.json. Empty when there is none.
+static func pick_module(modules: Array[ModuleInfo], args: PackedStringArray) -> String:
+	for arg: String in args:
+		if arg.begins_with(MODULE_ARG):
+			return arg.substr(MODULE_ARG.length()).strip_edges().to_lower()
+	return modules[0].id if not modules.is_empty() else ""
 
 func _ready() -> void:
 	var modules: Array[ModuleInfo] = Drive.list_modules()
 	if modules.is_empty():
 		_boot_error("No modules found under game/modules/.")
 		return
-	if not Drive.set_module(modules[0].id):
-		_boot_error("Failed to activate module: " + modules[0].id)
+	var module_id: String = pick_module(modules, OS.get_cmdline_user_args())
+	if not Drive.set_module(module_id):
+		var ids: Array[String] = []
+		for info: ModuleInfo in modules:
+			ids.append(info.id)
+		_boot_error("Failed to activate module: " + module_id + "
+Modules: " + ", ".join(ids))
 		return
 	var lost: Array[String] = Drive.def_errors()
 	if not lost.is_empty():
@@ -20,7 +35,7 @@ func _ready() -> void:
 		return
 	var the_rules: Codex = God.rules.current()
 	if not the_rules.is_valid():
-		_boot_error("Invalid rules — check content/system/game.json in module '" + modules[0].id + "'.")
+		_boot_error("Invalid rules — check content/system/game.json in module '" + module_id + "'.")
 		return
 	# The flows of screens are Things of the Def `flow`, which D5Star infers.
 	var flow_id: String = the_rules.get_flow()

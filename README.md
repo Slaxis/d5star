@@ -119,6 +119,21 @@ parte de um scrapper pode ser outro.
 
 ---
 
+## Qual módulo abre
+
+Um jogo pode ter mais de um módulo nativo em `game/modules/`. O jogo abre o
+primeiro pela `order` do `module.json`, e `-- module=<id>` na linha de comando
+abre outro (v0.14.0):
+
+```bash
+godot --path . -- module=scrap_tribes
+```
+
+Um id que não existe para o boot numa tela de erro, com a lista dos módulos.
+`Game.pick_module(modules, args)` faz a escolha, sem cena, para os testes.
+
+---
+
 ## Mods: o modelo do Caves of Qud
 
 A lib foi pensada para mods do jeito do Caves of Qud: "o usuario prove `<thing>.json`, `<thing>.png` e `<thing>.gd` e vc tem a injeção de nova funcionalidade", nas
