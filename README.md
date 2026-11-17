@@ -181,6 +181,15 @@ fora dele não é de coisa nenhuma, qualquer que seja o nome. O
 `ScriptBindingValidator` avisa no boot quando um `<id>.gd` não é do tipo da
 coisa.
 
+**Sorteio pela família** (J205). Um sorteio diz o molde, não a lista:
+`{ "from": "event.weather" }` tira uma das coisas da família de `weather`,
+as que herdam dele, nunca uma `abstract`, cada uma pelo seu `weight` (1
+quando não diz, e a de 0 nunca sai). Um clima, uma arena ou uma carta nova
+entra no sorteio só por existir, a de um mod também, sem ninguém editar
+lista. `God.things.pick(sorteio, rng)` tira com o rng semeado da partida,
+`God.things.family(id)` lista a família, e o `DrawValidator` avisa no boot
+de um sorteio de coisa nenhuma.
+
 Um mod de usuário mora em `user://modules/<id>/`, com `module.json` e
 `content/`. O script de um mod é código, e roda na máquina de quem instala o
 mod, como no Qud.
@@ -276,27 +285,27 @@ campos de um jogo guardam ids, então o jogo diz, como dado, numa coisa do tipo
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 65 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 66 nomes
 colide com a engine:
 
 ```
-AddOperator       AncestorValidator  Asset              AssetManager
-Bus               Chroma             ClassRefValidator  Codex
-D5                D5Hub              D5Manager          Def
-DefManager        Dice               Directories        DirectoriesParser
-DivideOperator    Effect             EffectValidator    Event
-Flow              Game               HookValidator      JsonLoader
-KindDef           Loader             Mechanic           MediaHub
-Menu              ModuleInfo         ModuleManager      MultiplyOperator
-Overlay           Palette            Parser             ParserManager
-PartsValidator    PathManager        Record             Refs
-RefsValidator     ResourceManager    RuleHub            RulesParser
-SaveHub           SceneFlow          SceneLoader        ScriptBindingValidator
-ScriptLoader      SeedRng            ShaderLoader       SoundLoader
-SubtractOperator  Table              TextureLoader      Thing
-ThingAssembler    ThingCatalog       ThingHub           ThingOperator
-ThingType         ThingVariant       Validator          ValidatorManager
-World
+AddOperator             AncestorValidator  Asset              AssetManager
+Bus                     Chroma             ClassRefValidator  Codex
+D5                      D5Hub              D5Manager          Def
+DefManager              Dice               Directories        DirectoriesParser
+DivideOperator          DrawValidator      Effect             EffectValidator
+Event                   Flow               Game               HookValidator
+JsonLoader              KindDef            Loader             Mechanic
+MediaHub                Menu               ModuleInfo         ModuleManager
+MultiplyOperator        Overlay            Palette            Parser
+ParserManager           PartsValidator     PathManager        Record
+Refs                    RefsValidator      ResourceManager    RuleHub
+RulesParser             SaveHub            SceneFlow          SceneLoader
+ScriptBindingValidator  ScriptLoader       SeedRng            ShaderLoader
+SoundLoader             SubtractOperator   Table              TextureLoader
+Thing                   ThingAssembler     ThingCatalog       ThingHub
+ThingOperator           ThingType          ThingVariant       Validator
+ValidatorManager        World
 ```
 
 Três nomes já foram cedidos aos jogos de propósito, porque eram genéricos
