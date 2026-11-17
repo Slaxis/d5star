@@ -165,7 +165,10 @@ coisa dela, antes do espaço, quando pode mudar `e.data` ou `e.hold()`) e
 `think(id, marcas)`, só para as mecânicas dela, e `manifest(id, marcas,
 sobre)`, um fato no espaço dela, o canal, ou o `Air` sem canal. O fato é um
 `Event`, uma coisa. O `HookValidator` avisa no boot de um `_on_*` que não é
-gancho e de um método da lib que o script reescreve; o `EffectValidator`,
+gancho e de um método da lib que o script reescreve, e a lib inclui as
+nativas que um jogo registra no `d5star.json`: uma nativa diz na constante
+`HOOKS` os ganchos que não começam com `_on_`, e um método público do script
+que não é nenhum deles também é avisado; o `EffectValidator`,
 de um campo em `mods` que coisa nenhuma tem. O contrato inteiro, com o
 `Effect`, o `Dice` e a `Table`, está no `docs/D5STAR.md` §2 do jogo.
 
