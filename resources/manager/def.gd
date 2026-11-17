@@ -18,7 +18,10 @@
 # A Thing carries parts as Caves of Qud's blueprints do: it names them in
 # `parts`, and each part, a Thing of kind part wherever its file sits, gives
 # its data under the Thing's own, so the Thing writes only what differs from
-# the part (v0.13.0). A heir joins its parts to its ancestor's.
+# the part (v0.13.0). A heir joins its parts to its ancestor's, each part
+# once, and `{"-": [...]}` takes one out (J204). Of two parts that give a
+# field the Thing does not write, the one named last gives it, and the
+# activation says so: `warnings()`.
 #
 # The id of a Thing may say its parent, `<parent>.<name>` (J188): `card.loot`
 # is the Thing `loot`, a heir of `card`. Such a Thing writes no def, ancestor
@@ -79,6 +82,7 @@ var _defs: Dictionary = {}
 var _base_json: Dictionary = {}
 var _inferred: Array[String] = []    # the KindDefs inferred for the active modules
 var _errors: Array[String] = []      # the Things the last activation could not place
+var _warnings: Array[String] = []    # what the last activation placed but must say (J204)
 var _things: Dictionary = {}         # name -> the layers of the Thing of its last read, as written
 
 func _read_json(path: String) -> Dictionary:
@@ -96,6 +100,7 @@ func scan() -> void:
 	_base_json.clear()
 	_inferred.clear()
 	_errors.clear()
+	_warnings.clear()
 	_things.clear()
 	_scan_defs(defs_root)
 
@@ -194,6 +199,7 @@ func apply_module_overrides(content_roots: Array[String]) -> void:
 		_defs.erase(def_id)
 	_inferred.clear()
 	_errors.clear()
+	_warnings.clear()
 	_things.clear()
 	for def_id: String in _scripts.keys():
 		_reset_def(def_id)
@@ -204,6 +210,11 @@ func apply_module_overrides(content_roots: Array[String]) -> void:
 # What the last activation could not place, one line each, with its path.
 func errors() -> Array[String]:
 	return _errors.duplicate()
+
+# What the last activation placed but must say, one line each (J204): a field
+# two parts of one Thing give, which the part named last gives.
+func warnings() -> Array[String]:
+	return _warnings.duplicate()
 
 # A Thing of the active modules as its layers write it, with the keys that
 # place it: the Thing of the last read of its id, which is the module's of
@@ -601,17 +612,23 @@ func _data_of(thing_of: Dictionary, index: Dictionary, chain: Array) -> Variant:
 	return data
 
 # A Thing's data with its parts' under it: each part the Thing names in
-# `parts`, its own and its ancestors', is the last Thing with that id whose
-# kind is part, and gives each field of its data, its own `kind` and `parts`
-# aside, that the Thing does not write; of two parts with a field, the one named
-# last gives it. A part that is not there is an error, with the Thing's path.
+# `parts`, its own and its ancestors', once, is the last Thing with that id
+# whose kind is part, and gives each field of its data, its own `kind` and
+# `parts` aside, that the Thing does not write; of two parts with a field, the
+# one named last gives it, and a warning says so (J204). A part that is not
+# there is an error, with the Thing's path.
 func _with_parts(data: Dictionary, index: Dictionary, entry: Dictionary) -> Dictionary:
 	var named: Variant = data.get(KEY_PARTS, [])
 	if not named is Array or (named as Array).is_empty():
 		return data
-	var under: Dictionary = {}
+	var parts: Array = []
 	for part: Variant in named:
 		var part_id: String = _key(String(part))
+		if not parts.has(part_id):
+			parts.append(part_id)
+	var under: Dictionary = {}
+	var givers: Dictionary = {}    # field -> the parts that give it, in the order named
+	for part_id: String in parts:
 		var found: Dictionary = {}
 		var of_name: Dictionary = index.get(part_id, {})
 		for def_id: Variant in of_name:
@@ -626,12 +643,22 @@ func _with_parts(data: Dictionary, index: Dictionary, entry: Dictionary) -> Dict
 			var copy: Dictionary = (given as Dictionary).duplicate(true)
 			copy.erase(KEY_KIND)
 			copy.erase(KEY_PARTS)
+			for field: Variant in copy:
+				var by: Array = givers.get(field, [])
+				by.append(part_id)
+				givers[field] = by
 			under.merge(copy, true)
 	var out: Dictionary = {}
 	for key: Variant in under:
 		if not data.has(key):
 			out[key] = under[key]
+			var by: Array = givers[key]
+			if by.size() > 1:
+				_warnings.append("Thing '%s': the parts '%s' give %s, and '%s', named last, gives it" % [
+					_label(entry), "' and '".join(by), key, by.back()])
 	out.merge(data, true)
+	if parts.size() != (named as Array).size():
+		out[KEY_PARTS] = parts
 	return out
 
 func _error(path: String, message: String) -> void:

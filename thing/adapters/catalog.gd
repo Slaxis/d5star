@@ -7,7 +7,9 @@
 # by either; its mechanics, the ones it plugs in, are its `mechanics`, and
 # a Thing of the format of before names them in `parts`. A Thing a mod
 # changes comes in layers, the lowest priority first, and each merges over
-# the one before, over what the Thing inherits (Mesclar, J188).
+# the one before, over what the Thing inherits (Mesclar, J188). The mechanics
+# merge by id (J204): each plugs once, a writing changes the fields the Thing
+# gives one, and `{"-": [...]}` takes one out (`ThingType.plug`).
 #
 # Instances are pure RefCounted Things, a Mechanic among them, never Nodes —
 # materialising in the scene tree is an upstream concern.
@@ -57,17 +59,6 @@ func _merge_data(base: Dictionary, extra: Dictionary) -> Dictionary:
 		return merged
 	return {}
 
-func _merge_mechanics(base: Array[String], extra: Array[String]) -> Array[String]:
-	var merged: Variant = ThingVariant.merge(base, extra)
-	if not merged is Array:
-		return []
-	var results: Array[String] = []
-	for entry in merged:
-		var part_id: String = String(entry).strip_edges().to_lower()
-		if part_id != "":
-			results.append(part_id)
-	return results
-
 func _script(script_id: String) -> Script:
 	return God.things.script(script_id)
 
@@ -110,13 +101,7 @@ func _parse_type(raw: Dictionary) -> ThingType:
 	if type.kind != KIND_PART:
 		type.kind = KIND_THING
 	type.is_abstract = bool(raw.get(KEY_ABSTRACT, false))
-	for key: String in [KEY_PARTS, KEY_MECHANICS]:
-		var listed: Variant = raw.get(key, [])
-		if listed is Array:
-			for one: Variant in (listed as Array):
-				var mechanic_id: String = String(one).strip_edges().to_lower()
-				if mechanic_id != "":
-					type.mechanics.append(mechanic_id)
+	_plug(type, raw)
 	var data: Dictionary = {}
 	var reserved: Dictionary = {
 		KEY_ID: true,
@@ -151,11 +136,19 @@ func _get_type(type_id: String) -> ThingType:
 	_types[key] = parsed
 	return parsed
 
+# What one layer writes in `parts` and in `mechanics`, plugged over the
+# mechanics before it and kept, for the catalog to plug again over what the
+# Thing inherits (J204).
+func _plug(type: ThingType, raw: Dictionary) -> void:
+	for key: String in [KEY_PARTS, KEY_MECHANICS]:
+		if raw.has(key):
+			type.plugs.append(raw[key])
+			type.plug(raw[key])
+
 # A later layer of a Thing over its type (Mesclar, J188): its data merges
-# over the data before it when the type is resolved, its mechanics merge
-# over the ones before as any list does, joined or with an operator of
-# lists, and an ancestor, a kind or a flag of template it writes takes the
-# place of the one before.
+# over the data before it when the type is resolved, its mechanics plug over
+# the ones before by id (J204), and an ancestor, a kind or a flag of template
+# it writes takes the place of the one before.
 func _layer(type: ThingType, raw: Dictionary) -> void:
 	var layer: ThingType = _parse_type(raw)
 	if layer.ancestor != "":
@@ -164,15 +157,7 @@ func _layer(type: ThingType, raw: Dictionary) -> void:
 		type.kind = layer.kind
 	if raw.has(KEY_ABSTRACT):
 		type.is_abstract = layer.is_abstract
-	for key: String in [KEY_PARTS, KEY_MECHANICS]:
-		if raw.has(key):
-			var merged: Variant = ThingVariant.merge(type.mechanics, raw[key])
-			var ids: Array[String] = []
-			for one: Variant in (merged as Array if merged is Array else []):
-				var mechanic_id: String = String(one).strip_edges().to_lower()
-				if mechanic_id != "":
-					ids.append(mechanic_id)
-			type.mechanics = ids
+	_plug(type, raw)
 	type.layers.append(layer.data)
 
 func _resolve_type(type_id: String) -> ThingType:
@@ -197,8 +182,10 @@ func _resolve_type(type_id: String) -> ThingType:
 
 # A type with its ancestor's data under its own, then each of its later
 # layers, and the script it is born from. The ancestor is a type when one
-# has its id, and gives its data and its script; or only a script, a native
-# among them (J188). Null, after saying so, when it is neither.
+# has its id, and gives its data, its mechanics and its script; or only a
+# script, a native among them (J188). Its own writings of mechanics plug over
+# the ancestor's, so it changes a field of one it inherits, or takes one out
+# (J204). Null, after saying so, when it is neither.
 func _resolve(base: ThingType) -> ThingType:
 	var parent: ThingType = null
 	if base.ancestor != "":
@@ -224,7 +211,12 @@ func _resolve(base: ThingType) -> ThingType:
 	merged.data = base.data.duplicate(true) if parent == null else _merge_data(parent.data, base.data)
 	for layer: Dictionary in base.layers:
 		merged.data = _merge_data(merged.data, layer)
-	merged.mechanics = base.mechanics.duplicate() if parent == null else _merge_mechanics(parent.mechanics, base.mechanics)
+	if parent == null:
+		merged.plug_from(base)
+	else:
+		merged.plug_from(parent)
+		for written: Variant in base.plugs:
+			merged.plug(written)
 	return merged
 
 # Instantiates a Thing (or a Mechanic) via `script.new()`. Returns

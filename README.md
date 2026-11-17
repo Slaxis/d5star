@@ -112,7 +112,9 @@ com o seu def, em qualquer pasta, de preferência na do seu contexto,
 `things/economy/chem_reactor.json`. A parte dá os campos dela, no valor
 neutro, por baixo dos da coisa: a linha do `KindDef` tem todo campo que as
 partes dão, e a coisa escreve só o que difere. Um herdeiro soma as partes dele
-às do ancestral, e de duas partes com o mesmo campo vale a nomeada por último.
+às do ancestral, cada uma uma vez só, e `"parts": {"-": ["shelter"]}` tira uma
+e deixa as outras (J204). De duas partes com o mesmo campo vale a nomeada por
+último, e o boot avisa, com as duas.
 Uma parte que não é coisa de kind part é erro, com o caminho. A mesma parte
 serve a qualquer tipo: o prédio que consome chem é um `chem_reactor`, e uma
 parte de um scrapper pode ser outro.
@@ -169,9 +171,22 @@ de um campo em `mods` que coisa nenhuma tem. O contrato inteiro, com o
 
 **Mesclar.** Uma coisa escrita de novo, com o id e o def de uma que um módulo
 abaixo já tem, muda só o que escreve: um número com operador age sobre o de
-baixo, uma lista se junta e o resto fica como estava. Uma linha sem def nem
-pai muda a coisa daquele id, `{ "id": "barracks", "cost": "+1" }`, ou pluga
-uma mecânica nela, `{ "id": "cria", "mechanics": ["birth"] }`.
+baixo, uma lista se junta, `{"-": [...]}` tira itens dela (J204), e o resto
+fica como estava. Uma linha sem def nem pai muda a coisa daquele id,
+`{ "id": "barracks", "cost": "+1" }`, pluga uma mecânica nela,
+`{ "id": "cria", "mechanics": ["birth"] }`, muda um campo da mecânica que ela
+pluga, `{ "id": "cria", "mechanics": { "birth": { "max": "+1" } } }`, ou tira a
+mecânica, `{ "id": "cria", "mechanics": { "-": ["birth"] } }`.
+
+**Mecânicas por id (J204).** Uma coisa pluga cada mecânica uma vez, pelo nome:
+um herdeiro ou um patch que a nomeia de novo não pluga outra, e `birth` e
+`mechanic.birth` são a mesma. O `mechanics` pode ser um mapa, cada mecânica
+com os campos que a coisa dá a ela, mesclados por cima dos dados da própria
+mecânica quando ela pluga: a fazenda pluga `{ "work": { "dc": 12 } }`, a mina
+`{ "work": { "dc": "+4" } }` sobre o 10 do `work`, e o `mechanic.work` fica
+como estava. Um campo que a mecânica não tem é aviso no boot, menos
+`priority`, `hears` e `watches`, que a lib lê de toda mecânica. A lista de
+antes continua valendo, e o `parts` continua uma lista.
 
 `God.things.create(id)` monta a coisa a partir do script dela, com os dados.
 As pastas de conteúdo vêm da maior prioridade para a menor, então um mod que

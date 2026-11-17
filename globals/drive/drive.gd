@@ -258,6 +258,15 @@ func def_errors() -> Array[String]:
 		return []
 	return dm.errors()
 
+# What the active modules placed but must say, one line each (J204): a field
+# two parts of one Thing give, which the part named last gives. The boot warns
+# of each, through PartsValidator.
+func def_warnings() -> Array[String]:
+	var dm: DefManager = _m(DefManager.ID) as DefManager
+	if dm == null:
+		return []
+	return dm.warnings()
+
 # A Thing of the active modules as it was written, every key with it, from a
 # list or from a file of its own: the last read of its id, which is the
 # module's of highest priority. Empty when no module has it.
