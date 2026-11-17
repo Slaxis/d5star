@@ -2,7 +2,14 @@
 # `ancestor` chain via ThingVariant merge, caches prototypes, and
 # clones fresh instances on demand.
 #
-# Instances are pure RefCounted (Thing or ThingPart), never Nodes —
+# A Thing whose id says its parent, `<parent>.<name>` (J188), comes from
+# DefManager with its id split in its name and its ancestor, and is found
+# by either; its mechanics, the ones it plugs in, are its `mechanics`, and
+# a Thing of the format of before names them in `parts`. A Thing a mod
+# changes comes in layers, the lowest priority first, and each merges over
+# the one before, over what the Thing inherits (Mesclar, J188).
+#
+# Instances are pure RefCounted Things, a Mechanic among them, never Nodes —
 # materialising in the scene tree is an upstream concern.
 extends Resource
 class_name ThingCatalog
@@ -11,6 +18,7 @@ const KEY_ID := "id"
 const KEY_DEF := "def"
 const KEY_ANCESTOR := "ancestor"
 const KEY_PARTS := "parts"
+const KEY_MECHANICS := "mechanics"
 const KEY_KIND := "kind"
 const KEY_ABSTRACT := "abstract"
 
@@ -49,7 +57,7 @@ func _merge_data(base: Dictionary, extra: Dictionary) -> Dictionary:
 		return merged
 	return {}
 
-func _merge_parts(base: Array[String], extra: Array[String]) -> Array[String]:
+func _merge_mechanics(base: Array[String], extra: Array[String]) -> Array[String]:
 	var merged: Variant = ThingVariant.merge(base, extra)
 	if not merged is Array:
 		return []
@@ -69,24 +77,26 @@ func _has_script(script_id: String) -> bool:
 	return _script(script_id) != null
 
 # Resolves which Script the instance should `script.new()` from.
-# Order: explicit ancestor script → inherited from parent → self-id
-# auto-bind convention → base script for the kind.
+# Order (J188): its own script → its ancestor's, the script of the type it
+# inherits from, or the ancestor itself when it is only a script, a native
+# among them → the native of its kind.
 #
-# Self-id auto-bind: the `<id>.gd` of the content of the active modules
+# Its own script: the `<id>.gd` of the content of the active modules
 # (`God.things.script`), the model of Caves of Qud — a Thing with
 # `"id": "lamp"` is born from the `lamp.gd` its module brings, a script
 # that extends Thing, and a mod's `lamp.gd` takes the place of the game's.
+# A heir with no script of its own is born from its ancestor's.
 func _resolve_script_id(base: ThingType, parent: ThingType) -> String:
 	if base == null:
 		return ""
-	if base.ancestor != "" and _has_script(base.ancestor):
-		return base.ancestor
-	if parent != null and parent.script_id != "":
-		return parent.script_id
 	if _has_script(base.type_id):
 		return base.type_id
+	if parent != null and parent.script_id != "":
+		return parent.script_id
+	if base.ancestor != "" and _has_script(base.ancestor):
+		return base.ancestor
 	# Fallback to the kind-specific base script.
-	var base_name: String = "thing_part" if base.kind == KIND_PART else "thing"
+	var base_name: String = "mechanic" if base.kind == KIND_PART else "thing"
 	if _has_script(base_name):
 		return base_name
 	Log.log(self, "error", "ThingCatalog: base script '%s' not found." % base_name)
@@ -100,18 +110,20 @@ func _parse_type(raw: Dictionary) -> ThingType:
 	if type.kind != KIND_PART:
 		type.kind = KIND_THING
 	type.is_abstract = bool(raw.get(KEY_ABSTRACT, false))
-	var parts_raw: Variant = raw.get(KEY_PARTS, [])
-	if parts_raw is Array:
-		for part in parts_raw:
-			var part_id: String = String(part).strip_edges().to_lower()
-			if part_id != "":
-				type.parts.append(part_id)
+	for key: String in [KEY_PARTS, KEY_MECHANICS]:
+		var listed: Variant = raw.get(key, [])
+		if listed is Array:
+			for one: Variant in (listed as Array):
+				var mechanic_id: String = String(one).strip_edges().to_lower()
+				if mechanic_id != "":
+					type.mechanics.append(mechanic_id)
 	var data: Dictionary = {}
 	var reserved: Dictionary = {
 		KEY_ID: true,
 		KEY_DEF: true,
 		KEY_ANCESTOR: true,
 		KEY_PARTS: true,
+		KEY_MECHANICS: true,
 		KEY_KIND: true,
 		KEY_ABSTRACT: true,
 	}
@@ -128,14 +140,40 @@ func _get_type(type_id: String) -> ThingType:
 		return null
 	if _types.has(key):
 		return _types[key]
-	var raw: Dictionary = God.things.content(key)
-	if raw.is_empty() or not _is_thing_payload(raw):
+	var written: Array[Dictionary] = God.things.layers(key)
+	if written.is_empty() or (written.size() == 1 and not _is_thing_payload(written[0])):
 		return null
-	var parsed: ThingType = _parse_type(raw)
+	var parsed: ThingType = _parse_type(written[0])
 	if parsed.type_id == "":
 		return null
+	for i: int in range(1, written.size()):
+		_layer(parsed, written[i])
 	_types[key] = parsed
 	return parsed
+
+# A later layer of a Thing over its type (Mesclar, J188): its data merges
+# over the data before it when the type is resolved, its mechanics merge
+# over the ones before as any list does, joined or with an operator of
+# lists, and an ancestor, a kind or a flag of template it writes takes the
+# place of the one before.
+func _layer(type: ThingType, raw: Dictionary) -> void:
+	var layer: ThingType = _parse_type(raw)
+	if layer.ancestor != "":
+		type.ancestor = layer.ancestor
+	if raw.has(KEY_KIND):
+		type.kind = layer.kind
+	if raw.has(KEY_ABSTRACT):
+		type.is_abstract = layer.is_abstract
+	for key: String in [KEY_PARTS, KEY_MECHANICS]:
+		if raw.has(key):
+			var merged: Variant = ThingVariant.merge(type.mechanics, raw[key])
+			var ids: Array[String] = []
+			for one: Variant in (merged as Array if merged is Array else []):
+				var mechanic_id: String = String(one).strip_edges().to_lower()
+				if mechanic_id != "":
+					ids.append(mechanic_id)
+			type.mechanics = ids
+	type.layers.append(layer.data)
 
 func _resolve_type(type_id: String) -> ThingType:
 	var key: String = String(type_id).strip_edges().to_lower()
@@ -146,20 +184,35 @@ func _resolve_type(type_id: String) -> ThingType:
 	var base: ThingType = _get_type(key)
 	if base == null:
 		return null
+	if base.type_id != key:
+		# Asked by its whole id, `<parent>.<name>` (J188): the type of its name.
+		var named: ThingType = _resolve_type(base.type_id)
+		if named != null:
+			_resolved[key] = named
+		return named
+	var resolved: ThingType = _resolve(base)
+	if resolved != null:
+		_resolved[key] = resolved
+	return resolved
+
+# A type with its ancestor's data under its own, then each of its later
+# layers, and the script it is born from. The ancestor is a type when one
+# has its id, and gives its data and its script; or only a script, a native
+# among them (J188). Null, after saying so, when it is neither.
+func _resolve(base: ThingType) -> ThingType:
 	var parent: ThingType = null
-	if base.ancestor != "" and not _has_script(base.ancestor):
+	if base.ancestor != "":
 		parent = _resolve_type(base.ancestor)
-		if parent == null:
+		if parent == null and not _has_script(base.ancestor):
 			Log.log(self, "error", "ThingCatalog: ancestor type not found: " + base.ancestor)
 			return null
-	var merged: ThingType = ThingType.new()
 	var script_id: String = _resolve_script_id(base, parent)
 	if script_id == "":
 		return null
-	if parent == null:
+	if parent == null and base.layers.is_empty():
 		base.script_id = script_id
-		_resolved[key] = base
 		return base
+	var merged: ThingType = ThingType.new()
 	merged.type_id = base.type_id
 	merged.ancestor = base.ancestor
 	merged.kind = base.kind
@@ -168,12 +221,13 @@ func _resolve_type(type_id: String) -> ThingType:
 	# the base's own value.
 	merged.is_abstract = base.is_abstract
 	merged.script_id = script_id
-	merged.data = _merge_data(parent.data, base.data)
-	merged.parts = _merge_parts(parent.parts, base.parts)
-	_resolved[key] = merged
+	merged.data = base.data.duplicate(true) if parent == null else _merge_data(parent.data, base.data)
+	for layer: Dictionary in base.layers:
+		merged.data = _merge_data(merged.data, layer)
+	merged.mechanics = base.mechanics.duplicate() if parent == null else _merge_mechanics(parent.mechanics, base.mechanics)
 	return merged
 
-# Instantiates a Thing (or ThingPart) via `script.new()`. Returns
+# Instantiates a Thing (or a Mechanic) via `script.new()`. Returns
 # the typed base (RefCounted) — callers should check kind via the
 # resolved ThingType, not via Variant inspection.
 func _instantiate(script_id: String) -> RefCounted:
@@ -197,6 +251,10 @@ func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 	var type_id: String = String(raw.get(KEY_ID, "")).strip_edges().to_lower()
 	if type_id == "":
 		return null
+	if type_id.contains(Thing.ID_DOT):
+		# An id that says its parent, `<parent>.<name>` (J188).
+		raw[KEY_ANCESTOR] = Thing.parent_of(type_id)
+		type_id = Thing.name_of(type_id)
 	raw[KEY_ID] = type_id
 	if raw.has(KEY_ANCESTOR):
 		raw[KEY_ANCESTOR] = String(raw.get(KEY_ANCESTOR, "")).strip_edges().to_lower()
@@ -211,27 +269,9 @@ func register_runtime_type(spec: Dictionary, replace: bool = true) -> ThingType:
 	var base: ThingType = _parse_type(raw)
 	if base.type_id == "":
 		return null
-	var parent: ThingType = null
-	if base.ancestor != "" and not _has_script(base.ancestor):
-		parent = _resolve_type(base.ancestor)
-		if parent == null:
-			Log.log(self, "error", "ThingCatalog: ancestor type not found: " + base.ancestor)
-			return null
-	var script_id: String = _resolve_script_id(base, parent)
-	if script_id == "":
+	var resolved: ThingType = _resolve(base)
+	if resolved == null:
 		return null
-	var resolved: ThingType = base
-	if parent != null:
-		resolved = ThingType.new()
-		resolved.type_id = base.type_id
-		resolved.ancestor = base.ancestor
-		resolved.kind = base.kind
-		resolved.is_abstract = base.is_abstract  # per-Thing, not inherited
-		resolved.script_id = script_id
-		resolved.data = _merge_data(parent.data, base.data)
-		resolved.parts = _merge_parts(parent.parts, base.parts)
-	else:
-		base.script_id = script_id
 	_resolved[type_id] = resolved
 	return resolved
 
@@ -279,7 +319,7 @@ func get_type(type_id: String) -> ThingType:
 func resolve_type(type_id: String) -> ThingType:
 	return _resolve_type(type_id)
 
-# Public factory. Returns Thing (the typical case) or ThingPart
+# Public factory. Returns a Thing (the typical case) or a Mechanic
 # (when the resolved type's `kind` is "part"). Returns null for
 # abstract types (template-only; only their descendants can be
 # instantiated — RimWorld-style Abstract flag). The caller decides
@@ -320,6 +360,6 @@ func build_instance(thing_id: String, script_id: String, data: Dictionary, parts
 	var type: ThingType = ThingType.new()
 	type.type_id = thing_id
 	type.data = data
-	type.parts = parts
+	type.mechanics = parts
 	(_assembler as ThingAssembler).assemble(instance, type, self)
 	return instance

@@ -16,8 +16,11 @@ var parsers_subpath: String = "globals/drive/parser/parsers"
 var loaders_subpath: String = "globals/drive/loader/loaders"
 var validators_subpath: String = "globals/drive/validator/validators"
 var operators_subpath: String = "thing/data/operators"
-var thing_base_subpath: String = "thing/data/thing.gd"
-var thing_part_base_subpath: String = "thing/data/thing_part.gd"
+# The native Things, the roots every Thing descends from, each by its id
+# with the path of its script: the library's in engine.json, a composite's
+# or the game's in d5star.json (J188). A path is under the library unless it
+# opens with res://.
+var natives: Dictionary = {}
 var scene_dir_id: String = "scene"
 var game_config_name: String = "game"
 
@@ -28,8 +31,11 @@ func configure(config: Dictionary) -> void:
 	loaders_subpath = String(config.get("loaders", loaders_subpath))
 	validators_subpath = String(config.get("validators", validators_subpath))
 	operators_subpath = String(config.get("operators", operators_subpath))
-	thing_base_subpath = String(config.get("thing_base", thing_base_subpath))
-	thing_part_base_subpath = String(config.get("thing_part_base", thing_part_base_subpath))
+	natives = {}
+	var given: Variant = config.get("natives", {})
+	if given is Dictionary:
+		for id: Variant in (given as Dictionary):
+			natives[String(id).strip_edges().to_lower()] = String((given as Dictionary)[id])
 	scene_dir_id = String(config.get("scene_dir", scene_dir_id))
 	game_config_name = String(config.get("game_config", game_config_name))
 
@@ -124,11 +130,19 @@ func validators_root() -> String:
 func operators_root() -> String:
 	return engine_root + "/" + operators_subpath
 
-func thing_base_script() -> String:
-	return engine_root + "/" + thing_base_subpath
+# The script of a native Thing, by its id; "" when no lib registers that id.
+func native_script(id: String) -> String:
+	var path: String = String(natives.get(String(id).strip_edges().to_lower(), ""))
+	if path == "":
+		return ""
+	return path if path.begins_with(RES_ROOT) else engine_root + "/" + path
 
-func thing_part_base_script() -> String:
-	return engine_root + "/" + thing_part_base_subpath
+# The ids of the native Things, in the order they were registered.
+func native_ids() -> Array[String]:
+	var out: Array[String] = []
+	for id: Variant in natives:
+		out.append(String(id))
+	return out
 
 func resolve_resource_path(resource_id: String) -> String:
 	var key: String = resource_id.to_lower()

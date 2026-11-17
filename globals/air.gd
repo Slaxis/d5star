@@ -1,43 +1,47 @@
-# Air — the world bus. Autoload Node wrapping a `Bus` instance so
-# the SAME pub/sub primitive is shared with each Thing's local
-# `mind` and with the channel of each group of Things. Adds
-# `dispatch_deferred` — a Node-only sugar that queues a dispatch
-# until the next idle frame.
+# Air — the world bus. Autoload Node wrapping a `Bus`, the same primitive as
+# the mind of each Thing and the channel of each group of Things. Adds
+# `dispatch_deferred`, a Node-only sugar that queues an event until the next
+# idle frame.
 #
-# What a Thing on no channel says (`Thing.say`) broadcasts here.
-# World-facing systems (log, achievements, HUD, replay) subscribe.
-# Things don't need to know about their listeners — the bus
-# decouples them. A Thing on a channel is heard only there, and
-# whoever listens to that channel relays here what the world needs.
+# What a Thing on no channel manifests (`Thing.manifest`) happens here, and
+# the mechanics of such a Thing watch here what they watch. World-facing
+# systems (log, achievements, HUD, replay) hear it without knowing about the
+# Thing. A Thing on a channel is heard only there, and whoever listens to that
+# channel relays here what the world needs.
 #
-# The metaphor is deliberate: minds think privately; a channel is
-# a frequency only those tuned to it hear; air carries what is
-# announced to everyone.
+# The metaphor is deliberate: minds think privately; a channel is a frequency
+# only those tuned to it hear; air carries what is manifested to everyone.
 #
-# Signal `on_command` is re-emitted from the wrapped Bus so both
-# subscribers of the signal and subscribers of a type work
-# identically to the plain Bus class.
+# The signal `on_event` is re-emitted from the wrapped Bus, so its readers and
+# the ears of an id work as on a plain Bus.
 extends Node
 
-signal on_command(cmd: Cmd)
+## Every event that happens in the air, before any ear (`Bus.on_event`).
+signal on_event(e: Event)
 
-var _bus: Bus = Bus.new()
+## The Bus of the air, for whoever takes a space as a Bus: the mechanics of a
+## Thing on no channel watch here.
+var bus: Bus = Bus.new()
 
 func _ready() -> void:
-	_bus.on_command.connect(func(cmd: Cmd) -> void: on_command.emit(cmd))
+	bus.on_event.connect(_relay)
 
-func subscribe(cmd_type: StringName, callback: Callable) -> void:
-	_bus.subscribe(cmd_type, callback)
+## Hears the events of `id` and of its heirs, by priority (`Bus.subscribe`).
+func subscribe(id: StringName, callback: Callable, priority: int = 0) -> void:
+	bus.subscribe(id, callback, priority)
 
-func unsubscribe(cmd_type: StringName, callback: Callable) -> void:
-	_bus.unsubscribe(cmd_type, callback)
+func unsubscribe(id: StringName, callback: Callable) -> void:
+	bus.unsubscribe(id, callback)
 
-func dispatch(cmd: Cmd) -> void:
-	_bus.dispatch(cmd)
+## Makes `e` happen in the air (`Bus.dispatch`).
+func dispatch(e: Event) -> void:
+	bus.dispatch(e)
 
-# Node-only: schedule dispatch for the next idle frame. Useful when
-# the caller is mid-signal-emit and wants to avoid re-entrancy or
-# deferred subscriber lookup.
-func dispatch_deferred(cmd: Cmd) -> void:
-	if cmd != null and cmd.type != &"":
-		call_deferred("dispatch", cmd)
+## Node-only: makes `e` happen at the next idle frame, for a caller in the
+## middle of an emission that wants no re-entrancy.
+func dispatch_deferred(e: Event) -> void:
+	if e != null and e.thing_id != "":
+		call_deferred("dispatch", e)
+
+func _relay(e: Event) -> void:
+	on_event.emit(e)

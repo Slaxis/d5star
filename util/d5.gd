@@ -102,6 +102,10 @@ static func _successes(rng: RandomNumberGenerator, depth: int) -> int:
 #   0, 0, 5, 1  total  6, one star: two 0s turned the chain back up
 #
 # A d5* gives 0.21 stars on average, so 2d5* gives 0.42.
+#
+# Its ZEROS are the mirror (J189): the 0s that turned the chain down. A 0 that
+# comes while the chain already runs down turns it back up, and is no zero. In
+# the three rolls above: none, one, and one, the first 0 of the third.
 
 # Five points of margin are one degree: a 17 against a difficulty of 5 is 2.4 degrees.
 const DEGREE := 5
@@ -111,6 +115,7 @@ class Roll:
 	extends RefCounted
 	var total: int = 0
 	var stars: int = 0
+	var zeros: int = 0
 
 # A roll held against something else: a fixed difficulty, or another roll.
 class Outcome:
@@ -121,10 +126,23 @@ class Outcome:
 	var stars: int = 0
 	# The other side's stars in a contest; always 0 against a difficulty.
 	var foe_stars: int = 0
+	# The actor's zeros, and the other side's (J189).
+	var zeros: int = 0
+	var foe_zeros: int = 0
+	# The points of margin of one degree: DEGREE, unless a die says another.
+	var degree: int = DEGREE
 
-	# The margin in degrees of DEGREE points, fractions kept.
+	# The margin in degrees, fractions kept.
 	func degrees() -> float:
-		return float(margin) / float(DEGREE)
+		return float(margin) / float(degree)
+
+	# The margin in whole degrees, rounded down: 2 for 12 at 5 a degree, -1 for -3.
+	func whole_degrees() -> int:
+		return floori(float(margin) / float(degree))
+
+	# Whether the one who acted won: a tie goes to who resists.
+	func won() -> bool:
+		return margin > 0
 
 # The sum of `count` d5*, read both ways.
 static func read(rng: RandomNumberGenerator, count: int = DEFAULT_DICE) -> Roll:
@@ -140,6 +158,7 @@ static func against(base: int, difficulty: int, rng: RandomNumberGenerator,
 	var out := Outcome.new()
 	out.margin = base + dice_roll.total - difficulty
 	out.stars = dice_roll.stars
+	out.zeros = dice_roll.zeros
 	return out
 
 # Both sides roll, the attacker first, as in `contest`: the margin is the
@@ -152,6 +171,8 @@ static func versus(attacker_base: int, defender_base: int, rng: RandomNumberGene
 	out.margin = (attacker_base + attack.total) - (defender_base + defense.total)
 	out.stars = attack.stars
 	out.foe_stars = defense.stars
+	out.zeros = attack.zeros
+	out.foe_zeros = defense.zeros
 	return out
 
 # One d5* into `into`: the same draws as `_roll`, walked as a loop, with the direction
@@ -168,6 +189,8 @@ static func _read_one(rng: RandomNumberGenerator, into: Roll) -> void:
 			if direction > 0:
 				into.stars += 1
 		elif face == MIN_FACE:
+			if direction > 0:
+				into.zeros += 1
 			direction = -direction
 		else:
 			into.total += direction * face

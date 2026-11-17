@@ -85,7 +85,15 @@ func _load_engine_config() -> Dictionary:
 	# otherwise every game would have to edit a file inside the submodule.
 	# Optional: PathManager, ModuleManager and DefManager all have defaults.
 	if FileAccess.file_exists(PROJECT_CONFIG):
-		config.merge(_bootstrap_json(PROJECT_CONFIG), true)
+		var project: Dictionary = _bootstrap_json(PROJECT_CONFIG)
+		# The natives join: each lib registers its own, the library in its
+		# engine.json, a composite or the game in d5star.json (J188).
+		var natives: Dictionary = {}
+		for given: Variant in [config.get("natives", {}), project.get("natives", {})]:
+			if given is Dictionary:
+				natives.merge(given as Dictionary, true)
+		config.merge(project, true)
+		config["natives"] = natives
 	# Self-location always wins over a stale value in the JSON. PathManager
 	# re-prefixes "res://", so store the path without it.
 	config["engine_root"] = root.trim_prefix("res://")
@@ -259,6 +267,15 @@ func thing(thing_id: String) -> Dictionary:
 		return {}
 	return dm.thing(thing_id)
 
+# The layers of that Thing, each as a module wrote it, the lowest priority
+# first: the Things of one id and one def, which a mod writes to change only
+# what it writes (Mesclar, J188).
+func layers(thing_id: String) -> Array[Dictionary]:
+	var dm: DefManager = _m(DefManager.ID) as DefManager
+	if dm == null:
+		return [] as Array[Dictionary]
+	return dm.layers(thing_id)
+
 # --- Path API ---
 
 func _all_content_roots() -> Array[String]:
@@ -273,11 +290,15 @@ func content_path(asset_id: String, extension: String = "json") -> String:
 		return ""
 	return pm.content_path(asset_id, extension)
 
-func thing_base_script() -> String:
+# Whether `id` is a native Thing, a root some lib registers (J188).
+func is_native(id: String) -> bool:
 	var pm: PathManager = _m(PathManager.ID) as PathManager
-	if pm == null:
-		return ""
-	return pm.thing_base_script()
+	return pm != null and pm.native_script(id) != ""
+
+# The ids of the native Things, the roots every Thing descends from.
+func natives() -> Array[String]:
+	var pm: PathManager = _m(PathManager.ID) as PathManager
+	return pm.native_ids() if pm != null else [] as Array[String]
 
 # --- Typed media API (Loader-backed) ---
 #
@@ -339,7 +360,8 @@ func script(class_name_str: String) -> Script:
 # behavior, three files named by its id, `<id>.json`, `<id>.png` and `<id>.gd`.
 # So the script of a Thing is the `<id>.gd` of the content of the active
 # modules, the highest priority first, and a mod's takes the place of the
-# game's. "thing" and "thing_part" are the library's bases. No other script
+# game's. A native Thing, such as the library's "thing" and "mechanic", is
+# born from the script its lib registers. No other script
 # of the project is a Thing's, whatever its name. Null when the Thing has no
 # script of its own: the catalog then gives it the base of its kind.
 func script_by_id(id: String) -> Script:
@@ -348,12 +370,8 @@ func script_by_id(id: String) -> Script:
 	if rm == null or pm == null:
 		return null
 	var key: String = String(id).strip_edges().to_lower()
-	var path: String = ""
-	if key == "thing":
-		path = pm.thing_base_script()
-	elif key == "thing_part":
-		path = pm.thing_part_base_script()
-	elif key != "":
+	var path: String = pm.native_script(key)
+	if path == "" and key != "":
 		path = pm.content_path(key, "gd")
 	if path == "":
 		return null

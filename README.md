@@ -14,9 +14,9 @@ azarão vencer sem que ninguém tenha inclinado a régua a favor dele.
 D5.roll(rng)                    # um d5*
 D5.check(base, rng)             # base + 2d5*
 D5.contest(ataque, defesa, rng) # margem: > 0 significa que o ataque venceu
-D5.read(rng)                    # 2d5* lido duas vezes: total e estrelas (os 5 que somaram)
-D5.against(base, 5, rng)        # contra uma dificuldade: margem, graus (margem ÷ 5) e estrelas
-D5.versus(ataque, defesa, rng)  # a disputa com as estrelas de cada lado
+D5.read(rng)                    # 2d5* lido de novo: total, estrelas (os 5 que somaram) e zeros (os 0 que viraram)
+D5.against(base, 5, rng)        # contra uma dificuldade: margem, graus (margem ÷ 5), estrelas e zeros
+D5.versus(ataque, defesa, rng)  # a disputa com as estrelas e os zeros de cada lado; empate é de quem resiste
 ```
 
 Consumida como **git submodule** em `res://addons/d5star/`.
@@ -142,8 +142,36 @@ dela no nome, em qualquer pasta do seu `content/`:
 
 - `<id>.json`, os dados, sozinha ou numa lista de coisas;
 - `<id>.png`, a imagem;
-- `<id>.gd`, o comportamento: um script que estende `Thing`, ou `ThingPart`
-  para uma parte, sem `class_name`.
+- `<id>.gd`, o comportamento: um script que estende `Thing`, ou `Mechanic`
+  para uma mecânica, sem `class_name`. Uma coisa sem script nasce do script
+  do pai.
+
+Um id pode dizer o pai, `<pai>.<nome>`, com um ponto só: `mechanic.birth` é
+a coisa `birth`, herdeira da nativa `mechanic`. Ela não escreve `def`,
+`ancestor` nem `kind`: o def é a nativa na raiz da cadeia, e o nome é único,
+como um `class_name`. As nativas da lib são seis, em `"natives"` no
+`engine.json`: `thing`, `mechanic`, `event`, `effect`, `dice` e `table`; um
+jogo acrescenta as suas no `res://d5star.json`. O formato de antes, com
+`def`, `ancestor`, `kind` e `parts`, continua valendo.
+
+**Uma mecânica** (J189) é o JSON dela e, quando faz alguma coisa, o
+`<id>.gd` dela, que estende `Mechanic` e reescreve só os ganchos:
+`_on_attach()`, `_on_detach()`, `_on_thought(e)` e `_on_event(e)`. O dado
+diz quando ela ouve: `priority` (menor primeiro), `hears` (os fatos sobre a
+coisa dela, antes do espaço, quando pode mudar `e.data` ou `e.hold()`) e
+`watches` (os fatos do espaço, depois). A coisa tem dois verbos:
+`think(id, marcas)`, só para as mecânicas dela, e `manifest(id, marcas,
+sobre)`, um fato no espaço dela, o canal, ou o `Air` sem canal. O fato é um
+`Event`, uma coisa. O `HookValidator` avisa no boot de um `_on_*` que não é
+gancho e de um método da lib que o script reescreve; o `EffectValidator`,
+de um campo em `mods` que coisa nenhuma tem. O contrato inteiro, com o
+`Effect`, o `Dice` e a `Table`, está no `docs/D5STAR.md` §2 do jogo.
+
+**Mesclar.** Uma coisa escrita de novo, com o id e o def de uma que um módulo
+abaixo já tem, muda só o que escreve: um número com operador age sobre o de
+baixo, uma lista se junta e o resto fica como estava. Uma linha sem def nem
+pai muda a coisa daquele id, `{ "id": "barracks", "cost": "+1" }`, ou pluga
+uma mecânica nela, `{ "id": "cria", "mechanics": ["birth"] }`.
 
 `God.things.create(id)` monta a coisa a partir do script dela, com os dados.
 As pastas de conteúdo vêm da maior prioridade para a menor, então um mod que
@@ -248,25 +276,26 @@ campos de um jogo guardam ids, então o jogo diz, como dado, numa coisa do tipo
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 61 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 65 nomes
 colide com a engine:
 
 ```
-AddOperator      AncestorValidator  Asset                   AssetManager
-Bus              Chroma             ClassRefValidator       Cmd
-Codex            D5                 D5Hub                   D5Manager
-Def              DefManager         Directories             DirectoriesParser
-DivideOperator   Flow               Game                    JsonLoader
-KindDef          Loader             MediaHub                Menu
-ModuleInfo       ModuleManager      MultiplyOperator        Overlay
-Palette          Parser             ParserManager           PartsValidator
-PathManager      Record             Refs                    RefsValidator
-ResourceManager  RuleHub            RulesParser             SaveHub
-SceneFlow        SceneLoader        ScriptBindingValidator  ScriptLoader
-SeedRng          ShaderLoader       SoundLoader             SubtractOperator
-TextureLoader    Thing              ThingAssembler          ThingCatalog
-ThingData        ThingHub           ThingOperator           ThingPart
-ThingType        ThingVariant       Validator               ValidatorManager
+AddOperator       AncestorValidator  Asset              AssetManager
+Bus               Chroma             ClassRefValidator  Codex
+D5                D5Hub              D5Manager          Def
+DefManager        Dice               Directories        DirectoriesParser
+DivideOperator    Effect             EffectValidator    Event
+Flow              Game               HookValidator      JsonLoader
+KindDef           Loader             Mechanic           MediaHub
+Menu              ModuleInfo         ModuleManager      MultiplyOperator
+Overlay           Palette            Parser             ParserManager
+PartsValidator    PathManager        Record             Refs
+RefsValidator     ResourceManager    RuleHub            RulesParser
+SaveHub           SceneFlow          SceneLoader        ScriptBindingValidator
+ScriptLoader      SeedRng            ShaderLoader       SoundLoader
+SubtractOperator  Table              TextureLoader      Thing
+ThingAssembler    ThingCatalog       ThingHub           ThingOperator
+ThingType         ThingVariant       Validator          ValidatorManager
 World
 ```
 

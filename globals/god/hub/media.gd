@@ -126,7 +126,7 @@ func _type(id: String, what: String) -> ThingType:
 # The script a Thing has of its own, the one the catalog would build it from,
 # when it extends the library's class; null when it has none.
 func _script_of(type: ThingType, base: Script) -> Script:
-	if type.script_id == "thing" or type.script_id == "thing_part":
+	if Drive.is_native(type.script_id):
 		return null
 	var own: Script = God.things.script(type.script_id)
 	if own != null and _extends(own, base):

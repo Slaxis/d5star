@@ -1,32 +1,31 @@
 # ThingAssembler — given an instance and its resolved ThingType,
-# creates the parts declared by the type and wires them in.
+# creates the mechanics declared by the type and plugs them in.
 #
-# Parts are ThingParts (RefCounted) — wired via `part.attach(owner)`
-# which subscribes the part's `_on_thought` into the owner's
+# Mechanics are Things (RefCounted) — wired via `mechanic.attach(owner)`
+# which subscribes the mechanic's `_on_thought` into the owner's
 # `mind`. No scene tree involvement.
 #
-# Parts only get assembled onto Things; if the resolved type isn't a
-# Thing (e.g. it's itself a Part being instantiated standalone for
-# inspection), assemble is a no-op on the parts list.
+# A mechanic is a Thing too, so it may carry mechanics of its own, and
+# they are plugged into it the same way.
 extends RefCounted
 class_name ThingAssembler
 
-func _attach_parts(owner: Thing, part_ids: Array[String], catalog: ThingCatalog) -> void:
+func _attach_mechanics(owner: Thing, ids: Array[String], catalog: ThingCatalog) -> void:
 	if owner == null:
 		return
-	for part_id: String in part_ids:
-		var part_obj: RefCounted = catalog.create(part_id)
-		if part_obj == null:
+	for id: String in ids:
+		var made: RefCounted = catalog.create(id)
+		if made == null:
 			continue
-		if not part_obj is ThingPart:
+		if not made is Mechanic:
 			Log.log(self, "warning",
-				"ThingAssembler: type '%s' listed in parts isn't a ThingPart (kind != 'part')." % part_id)
+				"ThingAssembler: type '%s' listed as a mechanic isn't a Mechanic." % id)
 			continue
-		owner.add_part(part_obj as ThingPart)
+		owner.add_mechanic(made as Mechanic)
 
 func assemble(instance: RefCounted, type: ThingType, catalog: ThingCatalog) -> RefCounted:
 	if instance == null or type == null:
 		return instance
 	if instance is Thing:
-		_attach_parts(instance as Thing, type.parts, catalog)
+		_attach_mechanics(instance as Thing, type.mechanics, catalog)
 	return instance
