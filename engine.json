@@ -9,6 +9,7 @@
     "event": "thing/data/event.gd",
     "effect": "thing/data/effect.gd",
     "dice": "thing/data/dice.gd",
-    "table": "thing/data/table.gd"
+    "table": "thing/data/table.gd",
+    "view": "scene/view.gd"
   }
 }

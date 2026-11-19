@@ -303,7 +303,7 @@ campos de um jogo guardam ids, então o jogo diz, como dado, numa coisa do tipo
 ## ⚠️ Nomes reservados
 
 GDScript **não tem namespace**. Todo `class_name` da lib ocupa o registro
-global do projeto inteiro. Um jogo que declarar qualquer um destes 66 nomes
+global do projeto inteiro. Um jogo que declarar qualquer um destes 68 nomes
 colide com a engine:
 
 ```
@@ -323,7 +323,7 @@ ScriptBindingValidator  ScriptLoader       SeedRng            ShaderLoader
 SoundLoader             SubtractOperator   Table              TextureLoader
 Thing                   ThingAssembler     ThingCatalog       ThingHub
 ThingOperator           ThingType          ThingVariant       Validator
-ValidatorManager        World
+ValidatorManager        View               ViewHost           World
 ```
 
 Três nomes já foram cedidos aos jogos de propósito, porque eram genéricos
